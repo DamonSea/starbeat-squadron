@@ -38,7 +38,7 @@ Pausing brings up the deck with the pause key held down and the reels frozen. Fr
 <p align="center"><img src="media/pause.gif" width="300" alt="Cassette pause screen"></p>
 
 ### And also
-- **8 tracks.** Four are generated live by the game: Neon Drive (synthwave), Mothership Strut (funk), Pixel Overture (chiptune) and Liquid Velocity (drum & bass). The other four are recordings: Moon Colony, Red Sky, Primate Pulse and Swarm Song. On those, the tempo stays fixed and you win by surviving to the end of the song.
+- **8 tracks.** Four are generated live by the game: Neon Drive (synthwave), Mothership Strut (funk), Pixel Overture (chiptune) and Liquid Velocity (drum & bass). The other four are recordings: Moon Colony, Red Sky, Primate Pulse and Swarm Song. On those, the tempo stays fixed and you win by surviving to the end of the song. Red Sky follows a note chart instead of a fixed beat: 527 notes placed on the song's actual accented hits, Guitar Hero style.
 - **PS5 and standard controller support**, with rumble.
 - **A separate high score for each track**, plus your settings, saved in your browser.
 

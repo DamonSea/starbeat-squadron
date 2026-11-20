@@ -90,7 +90,7 @@ h2{font-size:20px;line-height:1.2;margin:0 0 10px}
   </div>
   <div class="side">
     <h1>Pick a track, then shoot on the beat</h1>
-    <p>A Galaga-style shooter where the soundtrack is the trigger. Your cannon only fires when you hit the beat. The swarm sways, dives and shoots in time with the music, and every wave you clear pushes the tempo up 8 BPM. Faster tracks mean faster dives. Your uploaded tracks are real recordings, so they keep their tempo (on Moon Colony, Red Sky and Primate Pulse, half-beats count as shots too), waves get more aggressive instead, and surviving to the end of the song wins.</p>
+    <p>A Galaga-style shooter where the soundtrack is the trigger. Your cannon only fires when you hit the beat. The swarm sways, dives and shoots in time with the music, and every wave you clear pushes the tempo up 8 BPM. Faster tracks mean faster dives. Your uploaded tracks are real recordings, so they keep their tempo (on Moon Colony and Primate Pulse, half-beats count as shots too, and Red Sky is charted note by note to the song's actual hits, like a Guitar Hero chart), waves get more aggressive instead, and surviving to the end of the song wins.</p>
     <h2>Track select</h2>
     <div class="tracks" id="tracks"></div>
     <div class="keys"><kbd>← →</kbd><span>or A / D to fly</span><kbd>SPACE</kbd><span>or J to fire, on the beat</span><kbd>P</kbd><span>or Esc to pause, then resume or go back to the menu</span><kbd>PS5</kbd><span>stick or d-pad to fly, ✕ / □ / R1 / R2 to fire, Options to pause, ○ to resume</span></div>
@@ -199,8 +199,9 @@ const SONGS=[
 ,
  {id:'moon',name:'Moon Colony',style:'Your upload',bpm:78.26,file:'moon_colony.mp3',phase:.336,len:255.6,loop:[40.2031,64.7367],sub:2,dif:3,
   note:'78 BPM, half-beats count · 4:15',short:'78 BPM  4:15',c1:'#c9d4ff',c2:'#7fe0ff',play(){}},
- {id:'redsky',name:'Red Sky',style:'Your upload',bpm:89.5522,file:'red_sky.mp3',phase:.624,len:327,loop:[0,326.29],sub:2,dif:3,
-  note:'90 BPM, half-beats count · 5:27',short:'90 BPM  5:27',c1:'#ff4d6d',c2:'#ff9a5a',play(){}},
+ {id:'redsky',name:'Red Sky',style:'Your upload',bpm:89.5522,file:'red_sky.mp3',phase:.624,len:327,loop:[0,326.29],sub:1,dif:3,
+  chart:[0.624,0.959,1.964,2.634,3.304,3.639,4.309,4.644,5.314,5.984,6.319,6.989,7.324,7.994,8.664,8.999,10.004,10.674,11.679,12.014,13.019,13.354,14.024,14.359,15.699,16.034,17.039,17.374,17.709,18.044,18.379,18.714,19.719,21.059,21.394,22.399,22.734,23.069,23.739,24.074,25.079,25.414,26.084,26.754,27.424,27.759,28.429,28.764,29.434,30.104,30.439,31.444,32.114,32.784,33.119,34.124,34.794,35.464,35.799,36.469,36.804,37.474,37.809,38.479,39.484,39.819,40.154,41.159,42.499,42.834,43.504,43.839,44.509,45.179,45.514,46.519,46.854,47.859,48.194,49.199,49.534,50.539,50.874,51.209,51.879,52.214,52.884,53.554,54.056,54.559,55.062,56.234,56.569,56.904,57.909,58.244,58.914,59.249,59.584,60.924,61.594,62.264,63.269,63.604,63.939,64.944,65.949,66.284,66.619,67.289,67.624,68.629,69.634,69.969,70.304,71.309,71.644,72.649,72.984,73.319,74.324,74.994,75.329,75.664,76.669,77.004,77.339,78.009,78.344,79.684,80.354,81.024,81.359,82.029,82.699,83.369,83.704,84.374,85.044,85.714,86.384,87.054,87.724,88.059,88.394,88.729,89.734,90.404,91.074,91.409,91.744,92.079,92.414,93.084,93.419,94.424,94.759,96.434,96.769,97.104,97.439,98.109,98.779,99.114,99.449,100.119,101.794,102.129,102.464,102.799,103.469,104.139,104.474,104.809,105.479,107.154,108.159,108.494,109.499,109.834,110.169,110.839,112.179,112.514,113.184,113.519,113.854,114.189,114.859,115.194,116.199,117.874,118.544,118.879,119.214,119.884,120.219,120.554,121.559,122.564,123.234,123.569,123.904,124.239,124.909,125.579,125.914,126.249,126.919,128.594,128.929,129.264,129.599,130.269,130.939,131.274,131.609,132.279,133.954,135.127,135.629,135.964,136.634,137.639,139.314,139.984,140.319,141.324,141.994,142.999,143.334,144.339,144.674,145.679,146.014,147.019,147.354,147.689,148.359,149.364,149.699,150.034,150.704,152.044,152.379,152.714,153.049,153.384,153.719,154.389,155.729,156.064,157.069,157.404,157.739,158.074,159.749,160.084,160.419,161.089,161.424,162.429,163.099,163.434,164.104,164.439,165.109,166.114,166.449,166.784,167.119,167.789,168.124,169.129,169.799,170.804,171.474,172.144,173.149,173.484,173.819,174.489,174.824,175.494,176.164,176.834,177.504,177.839,178.509,178.844,179.179,179.849,180.184,180.687,182.194,182.864,183.199,183.534,184.204,184.874,185.209,186.214,186.884,187.554,189.229,189.564,189.899,190.569,190.904,191.909,192.244,192.579,192.914,193.249,193.584,194.254,194.924,195.594,195.929,196.934,197.604,198.274,198.609,198.944,199.279,199.614,200.284,200.619,201.624,201.959,203.634,204.304,204.639,205.644,205.979,206.984,207.319,207.989,208.324,208.659,209.664,209.999,210.669,211.004,211.339,212.679,213.349,213.684,214.019,215.359,215.694,216.364,216.699,217.034,217.704,218.039,219.379,219.714,220.719,221.389,221.724,222.059,222.394,222.729,223.064,223.399,225.074,226.079,226.749,227.084,227.419,227.754,228.089,228.759,230.434,231.104,231.439,231.774,232.444,232.779,233.114,234.119,235.459,235.794,236.129,236.799,237.134,238.139,238.474,239.479,240.484,240.819,241.154,241.824,242.159,242.494,243.499,243.834,244.169,244.839,246.179,246.514,247.184,247.519,248.189,248.524,248.859,249.194,249.864,251.204,251.874,252.544,252.879,253.549,253.884,254.554,255.224,256.229,256.564,257.234,258.239,258.574,259.579,259.914,260.584,260.919,262.594,263.264,263.599,263.934,264.604,265.274,265.609,266.279,267.954,268.959,269.294,270.299,270.634,271.639,271.974,272.644,272.979,273.314,273.649,273.984,274.989,275.994,277.669,278.004,278.339,278.674,279.009,280.182,280.684,281.354,281.689,282.024,282.359,283.364,284.369,284.704,285.709,286.547,287.384,287.887,288.389,289.394,289.729,290.064,290.567,292.409,293.247,293.749,294.754,295.089,295.424,296.429,296.764,297.099,297.434,297.769,299.444,300.114,300.784,301.119,301.789,303.129,303.464,304.804,305.139,305.474,306.144,306.814,307.484,307.819,308.154,308.489,309.494,310.164,310.834,311.504,312.509,312.844,313.179,313.849,314.184,315.524,315.859,316.194,316.864,317.534,318.204,318.539,318.874,319.209,320.214,320.884,321.554,321.889,322.224,322.559,322.894,323.564,323.899,324.904,325.239],
+  note:'Charted to the song · 5:27',short:'SYNCED  5:27',c1:'#ff4d6d',c2:'#ff9a5a',play(){}},
  {id:'primate',name:'Primate Pulse',style:'Your upload',bpm:69.7674,file:'primate_pulse.mp3',phase:.682,len:211,loop:[0,210.7],sub:2,dif:4,
   note:'70 BPM, half-beats count · 3:31',short:'70 BPM  3:31',c1:'#c6f05a',c2:'#ff9f3f',play(){}},
  {id:'swarm',name:'Swarm Song',style:'Your upload',bpm:120,file:'swarm_song.mp3',phase:.464,len:226,loop:[0,226],sub:1,dif:3,
@@ -222,16 +223,22 @@ function decodeFile(x){if(!ac||!x.bytes||x.buf)return;const b=x.bytes;x.bytes=nu
 function stopFile(fade){if(!fileSrc)return;const s=fileSrc,g=fileGain;fileSrc=null;
   try{if(fade){g.gain.setTargetAtTime(.0001,ac.currentTime,.35);s.stop(ac.currentTime+2)}else s.stop()}catch(e){}}
 const fileReady=()=>!song.file||!!song.buf;
-function startMusic(preview){stopFile(false);bpm=song.bpm;pendBpm=0;want=null;
+function startMusic(preview){stopFile(false);bpm=song.bpm;pendBpm=0;want=null;chartOn=false;previewLoop=!!preview;
   if(song.file){if(!song.buf){want={preview};playing=false;loadFile(song);decodeFile(song);return}
     const o=preview?song.loop[0]:0,t0=ac.currentTime+.1;
     fileSrc=ac.createBufferSource();fileSrc.buffer=song.buf;fileGain=ac.createGain();fileGain.gain.value=1;
     fileSrc.connect(fileGain);fileGain.connect(master);
     if(preview){fileSrc.loop=true;fileSrc.loopStart=song.loop[0];fileSrc.loopEnd=song.loop[1]}
-    fileSrc.start(t0,o);songT0=t0-o;segs=[{b:0,t:songT0+song.phase,bpm}];lastBeat=Math.floor(beatAt(t0))-1;playing=true;return}
+    fileSrc.start(t0,o);songT0=t0-o;segs=[{b:0,t:songT0+song.phase,bpm}];chartOn=!!song.chart;lastBeat=Math.floor(beatAt(t0))-1;playing=true;return}
   const t0=ac.currentTime+.12;segs=[{b:0,t:t0,bpm}];nextT=t0;step=0;lastBeat=-1;playing=true}
-function beatAt(t){let s=segs[0];for(const g of segs)if(g.t<=t)s=g;return s.b+(t-s.t)*s.bpm/60}
-function timeOfBeat(b){let s=segs[0];for(const g of segs)if(g.b<=b)s=g;return s.t+(b-s.b)*60/s.bpm}
+let chartOn=false,previewLoop=false;
+function chartBeat(x){const T=song.chart,n=T.length;if(x<T[0])return(x-T[0])/(T[1]-T[0]);if(x>=T[n-1])return n-1+(x-T[n-1])/(T[n-1]-T[n-2]);
+  let lo=0,hi=n-1;while(hi-lo>1){const m=(lo+hi)>>1;if(T[m]<=x)lo=m;else hi=m}return lo+(x-T[lo])/(T[lo+1]-T[lo])}
+function chartTime(b){const T=song.chart,n=T.length;if(b<0)return T[0]+b*(T[1]-T[0]);if(b>=n-1)return T[n-1]+(b-n+1)*(T[n-1]-T[n-2]);
+  const i=Math.floor(b);return T[i]+(b-i)*(T[i+1]-T[i])}
+function beatAt(t){if(chartOn){let x=t-songT0;if(previewLoop){const L=song.loop[1]-song.loop[0];x=song.loop[0]+(((x-song.loop[0])%L)+L)%L}return chartBeat(x)}
+  let s=segs[0];for(const g of segs)if(g.t<=t)s=g;return s.b+(t-s.t)*s.bpm/60}
+function timeOfBeat(b){if(chartOn)return songT0+chartTime(b);let s=segs[0];for(const g of segs)if(g.b<=b)s=g;return s.t+(b-s.b)*60/s.bpm}
 const sfx=(f)=>{if(ac&&!muted)f(ac.currentTime)};
 setInterval(()=>{if(ac&&playing&&!paused)sched()},25);
 
@@ -407,7 +414,7 @@ function drawCassette(fr,spin){
   const r1x=WX+14,r2x=WX+WW-14,ry=WY+WH/2,ang=spin!=null?spin:(playing?beat*Math.PI/2:0);
   cx.fillStyle='#4a2e1a';cx.fillRect(r1x,ry+6,r2x-r1x,2);
   reel(r1x,ry,ang);reel(r2x,ry,ang+.4);
-  const info=song.file?(song.err?'ERROR':song.buf?Math.round(song.bpm)+' BPM':'LOADING'):song.bpm+' BPM';
+  const info=song.file?(song.err?'ERROR':song.buf?(song.chart?'SYNCED':Math.round(song.bpm)+' BPM'):'LOADING'):song.bpm+' BPM';
   txt(info,X+Wd/2,ry+3,6,song.err?'#ff5a4e':'#f4ecd8');
   // difficulty pips on the label
   for(let i=0;i<5;i++){cx.fillStyle=i<diff(song)?song.c1:'#d8ceb4';cx.fillRect(Math.round(X+Wd/2-24+i*10),LY+LH-6,7,4)}
@@ -482,12 +489,14 @@ function draw(){
   // HUD
   if(state!=='title'&&state!=='insert'){txt('SCORE',6,9,6,'#ff5a4e','left');txt(String(score),6,18,7,'#f4f1ff','left');
   txt('HI',120,9,6,'#ff5a4e');txt(String(Math.max(hiOf(song.id),score)),120,18,7,'#f4f1ff');
-  txt('STAGE '+level,234,9,6,'#ff5a4e','right');txt(Math.round(bpm)+' BPM',234,18,6,'#3fe0d0','right')}
+  txt('STAGE '+level,234,9,6,'#ff5a4e','right');txt(chartOn?'SYNCED':Math.round(bpm)+' BPM',234,18,6,'#3fe0d0','right')}
   if(state==='play'&&boss){cx.fillStyle='#ffffff1c';cx.fillRect(60,24,120,3);cx.fillStyle=song.c1;cx.fillRect(60,24,120*Math.max(0,boss.hp)/boss.max,3)}
   if(state==='play'&&cap){txt('4 PERFECTS TO BREAK FREE',120,262,6,'#f4f1ff');for(let i=0;i<4;i++){cx.fillStyle=i<cap.n?'#ffd23f':'#ffffff26';cx.fillRect(97+i*12,268,8,6)}}
   // beat gauge
   const gy=313;cx.fillStyle='#ffffff18';cx.fillRect(52,gy,136,1);
-  if(state==='play'||state==='title'){for(let k=0;k<4;k++){const d=Math.ceil(beat)+k-beat;if(d>3)continue;const o=d/3*64;
+  if(state==='play'||state==='title'){if(chartOn&&ac){const now=ac.currentTime,b0=Math.ceil(beat);for(let k=0;k<14;k++){const d=(timeOfBeat(b0+k)-now)/1.7;if(d>1)break;if(d<0)continue;const o=d*64;
+      cx.globalAlpha=1-d*.7;cx.fillStyle='#3fe0d0';cx.fillRect(Math.round(120-o)-1,gy-3,2,7);cx.fillRect(Math.round(120+o)-1,gy-3,2,7)}}
+    else for(let k=0;k<4;k++){const d=Math.ceil(beat)+k-beat;if(d>3)continue;const o=d/3*64;
       cx.globalAlpha=1-d/3*.7;cx.fillStyle='#3fe0d0';cx.fillRect(Math.round(120-o)-1,gy-3,2,7);cx.fillRect(Math.round(120+o)-1,gy-3,2,7)}
     if(song.sub===2)for(let k=0;k<4;k++){const d=Math.ceil(beat-.5)+.5+k-beat;if(d>3)continue;const o=d/3*64;
       cx.globalAlpha=.8-d/3*.6;cx.fillStyle='#3fe0d0';cx.fillRect(Math.round(120-o)-.5,gy-1,1,3);cx.fillRect(Math.round(120+o)-.5,gy-1,1,3)}
