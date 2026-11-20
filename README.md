@@ -37,6 +37,9 @@ Pausing brings up the deck with the pause key held down and the reels frozen. Fr
 
 <p align="center"><img src="media/pause.gif" width="300" alt="Cassette pause screen"></p>
 
+### Chart maker
+Make your own note chart for any of the recorded tracks. Press Record, get a 3-2-1 count-in, and tap Space (or FIRE, or ✕ on a controller) everywhere you want a note while the song plays. You can start recording partway through to redo just one section, snap your taps to the beat, test-play the result, and then save it. Use **Copy chart code** to share a chart, and **Paste a chart code** to load one.
+
 ### And also
 - **8 tracks.** Four are generated live by the game: Neon Drive (synthwave), Mothership Strut (funk), Pixel Overture (chiptune) and Liquid Velocity (drum & bass). The other four are recordings: Moon Colony, Red Sky, Primate Pulse and Swarm Song. On those, the tempo stays fixed and you win by surviving to the end of the song. Red Sky follows a note chart instead of a fixed beat: 527 notes placed on the song's actual accented hits, Guitar Hero style.
 - **PS5 and standard controller support**, with rumble.
