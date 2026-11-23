@@ -62,7 +62,9 @@ For precise work, open the **chart editor**. It shows a scrolling timeline with 
 
 If your shots keep grading late (common with Bluetooth headphones), raise the timing offset in the settings panel.
 
-For a harder run, switch **Beat guides** off in the settings. The ring around your ship and the markers in the bottom gauge disappear, so you play entirely by ear.
+For a harder run, switch **Beat guides** off in the settings. The ring around your ship and the markers in the bottom gauge disappear, so you play entirely by ear. Blind runs score **×1.5** and keep their own **blind best** for each track. Switching the guides back on mid-run cancels the bonus.
+
+Clear a recorded track without losing a ship to earn a **FLAWLESS +25,000** bonus, which the blind multiplier also boosts.
 
 ## Running it locally
 

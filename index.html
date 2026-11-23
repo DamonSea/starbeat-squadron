@@ -282,7 +282,7 @@ function fpos(e){const sw=Math.sin(beat*Math.PI/4)*14,spread=1+.06*pulse;
 function setState(v){if(v==='title'&&chartTesting){chartTesting=false;applyCharts()}state=v;document.body.classList.toggle('charting',v==='edit'||v==='chart');document.querySelectorAll('#tracks button').forEach(b=>b.disabled=v==='play'||v==='insert'||v==='chart'||v==='edit'||v==='clear'||v==='outro');if(typeof renderChartUI==='function')renderChartUI()}
 function start(){if(!ac)initAudio();if(ac.state==='suspended')ac.resume();
   score=0;lives=3;combo=0;best=0;level=1;px=120;inv=0;dead=0;jam=0;shots=[];eb=[];parts=[];pops=[];en=[];
-  boss=null;cap=null;py=296;stats={p:0,g:0,m:0};startMusic(false);firedBeat=-99;won=false;clearB=-1;paused=false;setState('play');spawnWave(0)}
+  boss=null;cap=null;py=296;stats={p:0,g:0,m:0};runBlind=!guides;deaths=0;startMusic(false);firedBeat=-99;won=false;clearB=-1;paused=false;setState('play');spawnWave(0)}
 function pick(i,preview){onLoaded=null;if(i!==sel){slideDir=i>sel?1:-1;slideT=performance.now()}sel=(i+SONGS.length)%SONGS.length;song=SONGS[sel];loadFile(song);st('sb_song',song.id);level=1;
   const c=document.querySelector('.cab');c.style.setProperty('--c1',song.c1);c.style.setProperty('--c2',song.c2);
   mq.querySelector('small').textContent=song.name.toUpperCase();renderTracks();if(typeof renderChartUI==='function'){take=take&&take.id===song.id?take:null;chartMsg='';renderChartUI()}
@@ -291,7 +291,7 @@ function pick(i,preview){onLoaded=null;if(i!==sel){slideDir=i>sel?1:-1;slideT=pe
   if(preview){if(!ac)initAudio();if(ac.state==='suspended')ac.resume();startMusic(true)}}
 function renderTracks(){const x=song,dis=state==='play'?'disabled':'',tri=d=>`<svg viewBox="0 0 22 26" aria-hidden="true"><path d="${d}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
   document.getElementById('tracks').innerHTML=`<button class="arr" data-d="-1" aria-label="Previous track" ${dis}>${tri('M18 3 L4 13 L18 23 Z')}</button>`+
-  `<div class="card" style="--a:${x.c1}" aria-live="polite"><b>${x.name}</b><span>${x.style} · ${x.note||x.bpm+' BPM start'}</span><em>best<br>${hiOf(x.id)}</em></div>`+
+  `<div class="card" style="--a:${x.c1}" aria-live="polite"><b>${x.name}</b><span>${x.style} · ${x.note||x.bpm+' BPM start'}</span><em>${guides?'best':'blind best'}<br>${hiOf(menuKey(x))}</em></div>`+
   `<button class="arr" data-d="1" aria-label="Next track" ${dis}>${tri('M4 3 L18 13 L4 23 Z')}</button>`}
 const fmt=v=>Math.floor(v/60)+':'+String(Math.floor(v%60)).padStart(2,'0');
 const diff=x=>x.dif||Math.max(1,Math.min(5,Math.round((x.bpm-85)/15)));
@@ -319,11 +319,11 @@ function updBoss(dt){const B=boss,k=Math.min(1,Math.max(0,(beat-stageB)/4)),phas
     if(u>=1){cap=null;B.beamTo=beat;pop('CAPTURED',px,py-14,'#ff5a4e');die();return}}
   for(const s of shots){if(!s.dead&&Math.abs(s.x-B.x)<17&&Math.abs(s.y-B.y)<10){s.dead=1;B.hp-=beat<B.stunTo?2:1;B.flash=.07;
     burst(s.x,s.y-2,'#f4f1ff',3);sfx(t=>tone(t,52,'square',.06,.04));if(B.hp<=0){killBoss();return}}}}
-function killBoss(){rumble(1,1,500);const B=boss,m=mult(),pts=5000*m;score+=pts;
+function killBoss(){rumble(1,1,500);const B=boss,m=mult(),pts=award(5000*m);
   for(let i=0;i<6;i++)burst(B.x+(Math.random()-.5)*44,B.y+(Math.random()-.5)*18,[song.c1,song.c2,'#f4f1ff'][i%3],26);
   pop('BOSS DOWN +'+pts,120,130,'#ffd23f');sfx(t=>{noise(t,200,.6,.9);tone(t,40,'sawtooth',.2,.8,600)});
-  en.forEach(e=>{score+=PTS[e.type]*m;burst(e.x,e.y,COL[e.type],12)});en=[];eb=[];cap=null;boss=null}
-function breakFree(){cap=null;boss.beamTo=beat;boss.stunTo=beat+4;inv=1;const pts=2000*mult();score+=pts;
+  en.forEach(e=>{award(PTS[e.type]*m);burst(e.x,e.y,COL[e.type],12)});en=[];eb=[];cap=null;boss=null}
+function breakFree(){cap=null;boss.beamTo=beat;boss.stunTo=beat+4;inv=1;const pts=award(2000*mult());
   pop('BREAK FREE +'+pts,120,210,'#ffd23f');burst(px,py,'#3fe0d0',24);sfx(t=>{tone(t,76,'square',.08,.15);tone(t+.08,83,'square',.08,.2)})}
 function onBeat(b){
   if(state!=='play')return;
@@ -358,11 +358,11 @@ function fire(){
 }
 
 let overAt=0;
-function die(){lives--;rumble(.9,.5,260);cap=null;burst(px,py,'#f4f1ff',30);burst(px,py,'#ff5a4e',20);sfx(t=>noise(t,300,.5,.5));
+function die(){lives--;deaths++;rumble(.9,.5,260);cap=null;burst(px,py,'#f4f1ff',30);burst(px,py,'#ff5a4e',20);sfx(t=>noise(t,300,.5,.5));
   combo=0;eb=[];dead=1;inv=2.6;
   if(lives<=0)endGame()}
-function endGame(){setState('over');playing=false;stopFile(true);overAt=performance.now();newHi=score>hiOf(song.id);
-  if(newHi){HI[song.id]=score;st('sb_his',JSON.stringify(HI))}renderTracks()}
+function endGame(){setState('over');playing=false;stopFile(true);overAt=performance.now();newHi=score>hiOf(hiKey());
+  if(newHi){HI[hiKey()]=score;st('sb_his',JSON.stringify(HI))}renderTracks()}
 let newHi=false,won=false;
 
 function update(dt){
@@ -393,7 +393,7 @@ function update(dt){
     for(const e of en){if(e.hp>0&&!s.dead&&Math.abs(s.x-e.x)<6.5&&Math.abs(s.y-e.y)<6){
       e.hp--;if(!s.p)s.dead=1;
       if(e.hp>0){burst(e.x,e.y,'#b77bff',6);sfx(t=>tone(t,60,'square',.08,.05))}
-      else{const m=mult(),pts=PTS[e.type]*(e.st==='dive'?2:1)*m;score+=pts;burst(e.x,e.y,COL[e.type],14);
+      else{const m=mult(),pts=award(PTS[e.type]*(e.st==='dive'?2:1)*m);burst(e.x,e.y,COL[e.type],14);
         if(e.st==='dive'||m>1)pop(String(pts),e.x,e.y-6,'#f4f1ff');sfx(t=>noise(t,900,.25,.18))}
       if(s.dead)break}}}
   if(boss){updBoss(dt);if(state!=='play')return}
@@ -404,8 +404,8 @@ function update(dt){
     if(dead<=0&&inv<=0&&!cap&&Math.abs(b.x-px)<4.5&&Math.abs(b.y-py)<6){b.y=999;die();break}}
   eb=eb.filter(b=>b.y<H+6);
   if(song.file&&ac.currentTime>songT0+song.len&&lives>0){beginClear();return}
-  if(state==='play'&&!en.length&&!boss&&clearB<0){level++;if(!song.file)pendBpm=Math.min(bpm+8,song.bpm+64);clearB=(Math.floor(beat/4)+2)*4;score+=1000*(level-1);
-    pop('+'+1000*(level-1),120,190,'#ffd23f')}
+  if(state==='play'&&!en.length&&!boss&&clearB<0){level++;if(!song.file)pendBpm=Math.min(bpm+8,song.bpm+64);clearB=(Math.floor(beat/4)+2)*4;const sb=award(1000*(level-1));
+    pop('+'+sb,120,190,'#ffd23f')}
 }
 
 /* ---------- drawing ---------- */
@@ -447,7 +447,7 @@ function drawCassette(fr,spin){
   // tape-head bay
   const BY=Y+Hd-30;cx.fillStyle=edge;cx.beginPath();cx.moveTo(X+34,BY);cx.lineTo(X+Wd-34,BY);cx.lineTo(X+Wd-26,Y+Hd-2);cx.lineTo(X+26,Y+Hd-2);cx.closePath();cx.fill();
   cx.fillStyle='#120c2a';[X+48,X+Wd-52].forEach(a=>cx.fillRect(a,Y+Hd-12,4,6));cx.fillRect(X+Wd/2-6,Y+Hd-10,12,4);
-  txt('BEST '+hiOf(song.id),X+Wd/2,BY+12,6,'#f4ecd8');
+  txt((guides?'BEST ':'BLIND BEST ')+hiOf(menuKey(song)),X+Wd/2,BY+12,6,'#f4ecd8');
   cx.restore()}
 /* ---------- tape-deck start animation ---------- */
 let insertAnim=(st('sb_ins')||'1')==='1',insT=0;const INS_LEN=1.5;
@@ -622,14 +622,18 @@ function drawChartRec(){if(!rec)return;const now=ac.currentTime-rec.zero,HY=205,
   if(now<rec.from){const n=Math.ceil(rec.from-now);txt(n>0?String(Math.min(3,Math.ceil((rec.start-ac.currentTime)/.4))):'',120,140,18,'#ffd23f')}
   txt('SPACE TAP   ESC STOP',120,312,6,'#b9b0e6')}
 /* ---------- song clear finale + way back to the menu ---------- */
+let runBlind=false,deaths=0;const BL=()=>runBlind?1.5:1,hiKey=()=>song.id+(runBlind?'_blind':''),menuKey=x=>x.id+(guides?'':'_blind');
+function award(p){const v=Math.round(p*BL());score+=v;return v}
 let stats={p:0,g:0,m:0},warp=1,clr=null,outT=0,titleFade=0;
-function beginClear(){const bonus=lives*5000,total=score+bonus,hit=stats.p+stats.g+stats.m,acc=hit?(stats.p+stats.g*.5)/hit:0;
-  clr={t0:performance.now(),base:score,bonus,total,acc,rank:acc>=.92?'S':acc>=.8?'A':acc>=.65?'B':'C',newHi:total>hiOf(song.id),sx:px,shown:0,slam:false,fw:0,ticks:0};
-  won=true;score=total;if(clr.newHi){HI[song.id]=total;st('sb_his',JSON.stringify(HI))}
+function beginClear(){const bonus=Math.round(lives*5000*BL()),flaw=deaths===0?Math.round(25000*BL()):0,total=score+bonus+flaw,hit=stats.p+stats.g+stats.m,acc=hit?(stats.p+stats.g*.5)/hit:0;
+  clr={t0:performance.now(),base:score,bonus,total,acc,rank:acc>=.92?'S':acc>=.8?'A':acc>=.65?'B':'C',newHi:total>hiOf(hiKey()),flaw,blind:runBlind,sx:px,shown:0,slam:false,fw:0,ticks:0};
+  won=true;score=total;if(clr.newHi){HI[hiKey()]=total;st('sb_his',JSON.stringify(HI))}
   eb=[];shots=[];cap=null;playing=false;stopFile(true);
   en.slice().sort((a,b)=>a.x-b.x).forEach((e,i)=>e.boomAt=.15+i*.06);if(boss)boss.boomAt=.1;
   setState('clear');
   sfx(t=>{[72,76,79,84,79,84].forEach((m,i)=>tone(t+.25+i*.11,m,'square',.05,.12,4000));[84,88,91].forEach(m=>tone(t+.25+6*.11,m,'triangle',.07,.9));noise(t+.25+6*.11,3000,.2,.8)})}
+function clrLines(){const L=[['PERFECT',stats.p,'#ffd23f'],['GREAT',stats.g,'#3fe0d0'],['MISS',stats.m,'#ff5a4e'],['BEST COMBO',best,'#f4f1ff'],['ACCURACY',Math.round(clr.acc*100)+'%','#f4f1ff'],['LIVES BONUS','+'+clr.bonus,song.c2]];
+  if(clr.flaw)L.push(['FLAWLESS','+'+clr.flaw,'#ffd23f']);if(clr.blind)L.push(['BLIND BONUS','×1.5',song.c1]);return L}
 function updClear(dt){const t=(performance.now()-clr.t0)/1000;
   for(const e of en)if(t>=e.boomAt&&!e.gone){e.gone=1;burst(e.x,e.y,COL[e.type],14);if(Math.random()<.5)sfx(x=>noise(x,900,.15,.12))}
   en=en.filter(e=>!e.gone);
@@ -642,12 +646,12 @@ function updClear(dt){const t=(performance.now()-clr.t0)/1000;
   if(t>1.6&&t<4.6&&t>clr.fw){clr.fw=t+.32;const x=40+Math.random()*160,y=60+Math.random()*90,c=[song.c1,song.c2,'#ffd23f','#f4f1ff'][Math.floor(Math.random()*4)];
     for(let i=0;i<26;i++){const a=i/26*6.283,v=50+Math.random()*25;parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,c,t:0})}sfx(x2=>noise(x2,1200,.12,.3))}
   // results appear line by line, then the score counts up and the rank lands
-  const shown=Math.max(0,Math.min(6,Math.floor((t-2.4)/.22)+1));if(shown>clr.shown){clr.shown=shown;sfx(x=>tone(x,79+shown,'square',.04,.05,4000))}
+  const shown=Math.max(0,Math.min(clrLines().length,Math.floor((t-2.4)/.22)+1));if(shown>clr.shown){clr.shown=shown;sfx(x=>tone(x,79+shown,'square',.04,.05,4000))}
   if(t>3.8&&t<4.9&&t>clr.ticks){clr.ticks=t+.06;sfx(x=>tone(x,96,'square',.015,.02,6000))}
   if(t>5.0&&!clr.slam){clr.slam=true;sfx(x=>{noise(x,800,.3,.25);tone(x,48,'sawtooth',.15,.4,900);if(clr.newHi)[84,88,91,96].forEach((m,i)=>tone(x+.15+i*.08,m,'square',.04,.1,5000))})}
   if(t>14)clearContinue()}
 function clearContinue(){const t=(performance.now()-clr.t0)/1000;if(t<1.2)return;
-  if(t<5.0){clr.t0=performance.now()-5.05e3;clr.shown=6;clr.slam=true;return}beginOutro()}
+  if(t<5.0){clr.t0=performance.now()-5.05e3;clr.shown=clrLines().length;clr.slam=true;return}beginOutro()}
 function beginOutro(){warp=1;outT=performance.now();setState('outro')}
 function updOutro(){const t=(performance.now()-outT)/1000;if(t>=(insertAnim?1.45:.4))finishOutro()}
 function finishOutro(){clr=null;px=120;py=296;en=[];parts=[];pops=[];setState('title');if(!insertAnim)titleFade=performance.now();fadeNext=true;pick(sel,true);fadeNext=false;renderTracks()}
@@ -655,10 +659,10 @@ function drawClear(fr){const t=(performance.now()-clr.t0)/1000,E=x=>1-(1-Math.ma
   if(py>-20){cx.drawImage(SP.ship,Math.round(px-5.5),Math.round(py-6))}
   if(t>1.5){const k=E((t-1.5)/.35),bounce=Math.sin(Math.min(1,(t-1.5)/.5)*Math.PI)*(1-Math.min(1,(t-1.5)/.5))*10,y=Math.round(-20+(70-(-20))*k-bounce);
     cx.save();cx.shadowColor=song.c1;cx.shadowBlur=10*sc;txt('SONG CLEAR',120,y,14,song.c2);cx.restore();txt(song.name.toUpperCase(),120,y+16,6,'#f4f1ff')}
-  if(t>2.3){const a=E((t-2.3)/.3);cx.globalAlpha=.85*a;cx.fillStyle='#0b0726';rrect(36,104+(1-a)*20,168,124,6);cx.fill();cx.globalAlpha=a;cx.strokeStyle=song.c1;cx.lineWidth=1;rrect(36.5,104.5+(1-a)*20,167,123,6);cx.stroke();cx.globalAlpha=1;
-    const hit=stats.p+stats.g+stats.m,L=[['PERFECT',stats.p,'#ffd23f'],['GREAT',stats.g,'#3fe0d0'],['MISS',stats.m,'#ff5a4e'],['BEST COMBO',best,'#f4f1ff'],['ACCURACY',Math.round(clr.acc*100)+'%','#f4f1ff'],['LIVES BONUS','+'+clr.bonus,song.c2]];
-    L.slice(0,clr.shown).forEach(([l,v,c],i)=>{const y=122+i*13;txt(l,48,y,6,'#b9b0e6','left');txt(String(v),192,y,6,c,'right')});
-    if(t>3.7){cx.fillStyle='#ffffff22';cx.fillRect(48,196,144,1);const u=Math.min(1,(t-3.8)/1.1),val=Math.round(clr.base+(clr.total-clr.base)*u);txt('SCORE',48,214,7,'#b9b0e6','left');txt(String(val),192,214,8,'#f4f1ff','right')}}
+  if(t>2.3){const a=E((t-2.3)/.3);const bh=clrLines().length>6?134:124;cx.globalAlpha=.85*a;cx.fillStyle='#0b0726';rrect(36,104+(1-a)*20,168,bh,6);cx.fill();cx.globalAlpha=a;cx.strokeStyle=song.c1;cx.lineWidth=1;rrect(36.5,104.5+(1-a)*20,167,bh-1,6);cx.stroke();cx.globalAlpha=1;
+    const L=clrLines(),dy=L.length>6?11:13,y0=L.length>6?118:122;
+    L.slice(0,clr.shown).forEach(([l,v,c],i)=>{const y=y0+i*dy;txt(l,48,y,6,'#b9b0e6','left');txt(String(v),192,y,6,c,'right')});
+    if(t>3.7){const yd=y0+L.length*dy-4;cx.fillStyle='#ffffff22';cx.fillRect(48,yd,144,1);const u=Math.min(1,(t-3.8)/1.1),val=Math.round(clr.base+(clr.total-clr.base)*u);txt('SCORE',48,yd+16,7,'#b9b0e6','left');txt(String(val),192,yd+16,8,'#f4f1ff','right')}}
   if(clr.slam){const u=Math.min(1,(t-5.0)/.25),k=3-2*u;const col={S:'#ffd23f',A:song.c2,B:'#3fe0d0',C:'#b9b0e6'}[clr.rank];
     cx.save();cx.translate(120,258);cx.scale(k,k);cx.globalAlpha=Math.min(1,u*1.4);cx.shadowColor=col;cx.shadowBlur=12*sc;txt(clr.rank,0,10,24,col);cx.restore();txt('RANK',120,276,6,'#b9b0e6');
     if(clr.newHi&&Math.floor(t*4)%2===0)txt('NEW BEST!',120,290,8,'#ffd23f')}
@@ -699,13 +703,13 @@ function draw(){
   for(const p of pops){cx.globalAlpha=1-p.t/.7;txt(p.s,p.x,p.y,6,p.c)}cx.globalAlpha=1;
   // HUD
   if(state!=='title'&&state!=='insert'&&state!=='chart'&&state!=='edit'&&state!=='clear'&&state!=='outro'){txt('SCORE',6,9,6,'#ff5a4e','left');txt(String(score),6,18,7,'#f4f1ff','left');
-  txt('HI',120,9,6,'#ff5a4e');txt(String(Math.max(hiOf(song.id),score)),120,18,7,'#f4f1ff');
+  txt('HI',120,9,6,'#ff5a4e');txt(String(Math.max(hiOf(state==='play'?hiKey():menuKey(song)),score)),120,18,7,'#f4f1ff');
   txt('STAGE '+level,234,9,6,'#ff5a4e','right');txt(chartOn?'SYNCED':Math.round(bpm)+' BPM',234,18,6,'#3fe0d0','right')}
   if(state==='play'&&boss){cx.fillStyle='#ffffff1c';cx.fillRect(60,24,120,3);cx.fillStyle=song.c1;cx.fillRect(60,24,120*Math.max(0,boss.hp)/boss.max,3)}
   if(state==='play'&&cap){txt('4 PERFECTS TO BREAK FREE',120,262,6,'#f4f1ff');for(let i=0;i<4;i++){cx.fillStyle=i<cap.n?'#ffd23f':'#ffffff26';cx.fillRect(97+i*12,268,8,6)}}
   // beat gauge
   const gy=313;cx.fillStyle='#ffffff18';cx.fillRect(52,gy,136,1);
-  if(state==='play'&&!guides)txt('BLIND',120,gy+3,6,'#ffffff38');
+  if(state==='play'&&!guides)txt(runBlind?'BLIND ×1.5':'BLIND',120,gy+3,6,'#ffffff38');
   else if(state==='play'||state==='title'){if(chartOn&&ac){const now=ac.currentTime,b0=Math.ceil(beat);for(let k=0;k<14;k++){const d=(timeOfBeat(b0+k)-now)/1.7;if(d>1)break;if(d<0)continue;const o=d*64;
       cx.globalAlpha=1-d*.7;cx.fillStyle='#3fe0d0';cx.fillRect(Math.round(120-o)-1,gy-3,2,7);cx.fillRect(Math.round(120+o)-1,gy-3,2,7)}}
     else for(let k=0;k<4;k++){const d=Math.ceil(beat)+k-beat;if(d>3)continue;const o=d/3*64;
@@ -736,7 +740,7 @@ function draw(){
     txt(song.name.toUpperCase(),120,140,9,song.c2);txt(song.style,120,156,6,'#f4f1ff');
     txt(song.file?(song.err?'COULD NOT LOAD':song.buf?song.short:'LOADING...'):song.bpm+' BPM START',120,172,6,song.err?'#ff5a4e':'#3fe0d0');
     for(let i=0;i<5;i++){cx.fillStyle=i<diff(song)?song.c1:'#ffffff22';cx.fillRect(96+i*10,180,7,7)}
-    txt('BEST '+hiOf(song.id),120,201,6,'#b9b0e6')}
+    txt((guides?'BEST ':'BLIND BEST ')+hiOf(menuKey(song)),120,201,6,'#b9b0e6')}
     const ax=3*pulse;cx.fillStyle=song.c1;
     cx.beginPath();cx.moveTo(18-ax,156);cx.lineTo(10-ax,150);cx.lineTo(18-ax,144);cx.fill();
     cx.beginPath();cx.moveTo(222+ax,156);cx.lineTo(230+ax,150);cx.lineTo(222+ax,144);cx.fill();
@@ -789,7 +793,7 @@ function pollPad(){const g=getPad();if(!g){padDir=0;return}
 addEventListener('gamepadconnected',()=>{padIdx=-1});
 function togglePause(){if(state==='chart'){stopRecord();return}if(state==='edit'){edTogglePlay();return}if(state!=='play'||!ac)return;paused=!paused;pauseSel=0;pauseT=performance.now();paused?ac.suspend():ac.resume()}
 function toMenu(){paused=false;pauseSel=0;if(ac.state==='suspended')ac.resume();
-  if(score>hiOf(song.id)){HI[song.id]=score;st('sb_his',JSON.stringify(HI))}
+  if(score>hiOf(hiKey())){HI[hiKey()]=score;st('sb_his',JSON.stringify(HI))}
   playing=false;stopFile(false);boss=null;cap=null;py=296;en=[];shots=[];eb=[];parts=[];pops=[];clearB=-1;setState('title');pick(sel,true)}
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='play'&&!paused)togglePause()});
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT')return;if(state==='edit'){editKey(e);return}const k=e.key.toLowerCase();
@@ -829,7 +833,7 @@ const ins=document.getElementById('ins');
 const setIns=v=>{insertAnim=v;st('sb_ins',v?'1':'0');ins.textContent='Start animation: '+(v?'on':'off');ins.setAttribute('aria-pressed',v)};
 setIns(insertAnim);ins.addEventListener('click',()=>setIns(!insertAnim));
 const gdb=document.getElementById('gd');
-const setGd=v=>{guides=v;st('sb_guides',v?'1':'0');gdb.textContent='Beat guides: '+(v?'on':'off (blind)');gdb.setAttribute('aria-pressed',v)};
+const setGd=v=>{guides=v;if(v&&state==='play')runBlind=false;if(typeof renderTracks==='function'&&document.getElementById('tracks').children.length)renderTracks();st('sb_guides',v?'1':'0');gdb.textContent='Beat guides: '+(v?'on':'off (blind ×1.5)');gdb.setAttribute('aria-pressed',v)};
 setGd(guides);gdb.addEventListener('click',()=>setGd(!guides));
 const tpb=document.getElementById('tp');
 const setTp=v=>{titlePulse=v;st('sb_tp',v?'1':'0');tpb.textContent='Title pulse: '+(v?'on':'off');tpb.setAttribute('aria-pressed',v)};
