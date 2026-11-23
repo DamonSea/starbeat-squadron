@@ -99,7 +99,7 @@ h2{font-size:20px;line-height:1.2;margin:0 0 10px}
   </div>
   <div class="side">
     <p class="preview">B-Sides preview build. Your live game stays on v1.0.</p>
-    <p style="font-size:15px"><b style="color:var(--ink)">New enemies:</b> Metronome (only Perfects crack it) · Static (only solid on the beat) · Echo (hit it twice, one beat apart) · Bass Drop (break it or dodge the slam) · Tape Worm (shoot the tail first). Use <b style="color:var(--ink)">Practice</b> in the settings to jump to them.</p>
+    <p style="font-size:15px"><b style="color:var(--ink)">New enemies:</b> Metronome (only Perfects crack it) · Static (only solid on the beat) · Echo (hit it twice, one beat apart) · Bass Drop (break it or dodge the slam) · Tape Worm (shoot the tail first) · Syncopator (only off-beat shots hurt it) · Conductor (switches you between double and half time). Use <b style="color:var(--ink)">Practice</b> in the settings to jump to them.</p>
     <h1>Pick a track, then shoot on the beat</h1>
     <p>A Galaga-style shooter where your cannon only fires on the beat. Built-in tracks speed up with every wave you clear; on recorded tracks, survive to the end of the song.</p>
     <h2>Track select</h2>
@@ -120,7 +120,7 @@ h2{font-size:20px;line-height:1.2;margin:0 0 10px}
       <div class="filters" id="filters"></div>
       <label for="ps" style="margin-bottom:6px">Practice: start at stage</label>
       <select id="ps" style="font:inherit;min-height:44px;border-radius:10px;border:1px solid #4a3a9a;background:#2a1c66;color:var(--ink);padding:0 10px;margin-bottom:12px">
-        <option value="1">1 (normal run)</option><option value="2">2: Metronome</option><option value="3">3: Skull Ship</option><option value="4">4: Static</option><option value="5">5: Echo</option><option value="7">7: Bass Drop</option><option value="8">8: Tape Worm</option><option value="10">10: mixed</option><option value="12">12: Ghost Skull</option></select>
+        <option value="1">1 (normal run)</option><option value="2">2: Metronome</option><option value="3">3: Skull Ship</option><option value="4">4: Static</option><option value="5">5: Echo</option><option value="7">7: Bass Drop</option><option value="8">8: Tape Worm</option><option value="10">10: mixed</option><option value="11">11: Syncopator</option><option value="12">12: Ghost Skull</option><option value="13">13: Conductor</option></select>
       <p style="margin:-4px 0 12px">Practice runs don't save high scores.</p>
       <label for="off">Timing offset <span id="offv">0 ms</span></label>
       <input id="off" type="range" min="-150" max="150" step="5" value="0">
@@ -160,7 +160,7 @@ let runSeed=1,rngS=1,nextSeed=0;
 function seedRun(sd){runSeed=sd>>>0||1;rngS=runSeed}
 function rng(){rngS=(rngS+0x6D2B79F5)>>>0;let t=rngS;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}
 const rint=n=>Math.floor(rng()*n);
-const COL={bee:'#ffd23f',fly:'#ff4f5e',boss:'#4ee39a',metro:'#c9a7ff',static:'#f4f1ff',echo:'#4fc1ff',bass:'#ff5a4e',worm:'#9dff6b'},PTS={bee:50,fly:80,boss:150,metro:300,static:200,echo:250,bass:600,worm:60};
+const COL={bee:'#ffd23f',fly:'#ff4f5e',boss:'#4ee39a',metro:'#c9a7ff',static:'#f4f1ff',echo:'#4fc1ff',bass:'#ff5a4e',worm:'#9dff6b',sync:'#ff9fe8',conductor:'#ffd23f'},PTS={bee:50,fly:80,boss:150,metro:300,static:200,echo:250,bass:600,worm:60,sync:250,conductor:1500};
 
 /* ---------- audio ---------- */
 let ac=null,master,noiseBuf,gtrIn,bpm=104,pendBpm=0,segs=[{b:0,t:0,bpm:104}],step=0,nextT=0,playing=false,level=1;
@@ -250,7 +250,7 @@ function stopFile(fade){if(!fileSrc)return;const s=fileSrc,g=fileGain;fileSrc=nu
   try{if(fade){g.gain.setTargetAtTime(.0001,ac.currentTime,.35);s.stop(ac.currentTime+2)}else s.stop()}catch(e){}}
 const fileReady=()=>!song.file||!!song.buf;
 let fadeNext=false;
-function startMusic(preview){stopFile(false);bpm=song.bpm;pendBpm=0;want=null;chartOn=false;previewLoop=!!preview;
+function startMusic(preview){stopFile(false);resetTempo();bpm=song.bpm;pendBpm=0;want=null;chartOn=false;previewLoop=!!preview;
   if(song.file){if(!song.buf){want={preview};playing=false;loadFile(song);decodeFile(song);return}
     const o=preview?song.loop[0]:0,t0=ac.currentTime+.1;
     fileSrc=ac.createBufferSource();fileSrc.buffer=song.buf;fileGain=ac.createGain();fileGain.gain.value=1;
@@ -265,9 +265,16 @@ function chartBeat(x){const T=song.chart,n=T.length;if(x<T[0])return(x-T[0])/gri
   let lo=0,hi=n-1;while(hi-lo>1){const m=(lo+hi)>>1;if(T[m]<=x)lo=m;else hi=m}return lo+(x-T[lo])/(T[lo+1]-T[lo])}
 function chartTime(b){const T=song.chart,n=T.length;if(b<0)return T[0]+b*gridP();if(b>=n-1)return T[n-1]+(b-n+1)*gridP();
   const i=Math.floor(b);return T[i]+(b-i)*(T[i+1]-T[i])}
-function beatAt(t){if(chartOn){let x=t-songT0;if(previewLoop){const L=song.loop[1]-song.loop[0];x=song.loop[0]+(((x-song.loop[0])%L)+L)%L}return chartBeat(x)}
+/* tempo factor: the game's beat runs at tf x the music's beat. Changes keep the beat continuous at the moment they happen. */
+let tf=1,tfB0=0,tfX0=0;
+/* switches snap to the nearest music beat, so game beats always land on real beats of the song */
+function setTempoFactor(n){if(!ac){tf=n;return}const t=ac.currentTime,b=Math.round(beatAt(t)),x=Math.round(baseBeatAt(t));tfB0=b;tfX0=x;tf=n}
+function resetTempo(){tf=1;tfB0=0;tfX0=0}
+function beatAt(t){const x=baseBeatAt(t);return tf===1&&tfB0===tfX0?x:tfB0+(x-tfX0)*tf}
+function timeOfBeat(b){return baseTimeOfBeat(tf===1&&tfB0===tfX0?b:tfX0+(b-tfB0)/tf)}
+function baseBeatAt(t){if(chartOn){let x=t-songT0;if(previewLoop){const L=song.loop[1]-song.loop[0];x=song.loop[0]+(((x-song.loop[0])%L)+L)%L}return chartBeat(x)}
   let s=segs[0];for(const g of segs)if(g.t<=t)s=g;return s.b+(t-s.t)*s.bpm/60}
-function timeOfBeat(b){if(chartOn)return songT0+chartTime(b);let s=segs[0];for(const g of segs)if(g.b<=b)s=g;return s.t+(b-s.b)*60/s.bpm}
+function baseTimeOfBeat(b){if(chartOn)return songT0+chartTime(b);let s=segs[0];for(const g of segs)if(g.b<=b)s=g;return s.t+(b-s.b)*60/s.bpm}
 const sfx=(f)=>{if(ac&&!muted)f(ac.currentTime)};
 setInterval(()=>{if(ac&&playing&&!paused)sched()},25);
 
@@ -351,6 +358,38 @@ EN.worm={r:[5,5],
     else{cx.fillStyle=e.idx%2?'#9dff6b':'#4ee39a';cx.beginPath();cx.arc(x,y,4,0,6.283);cx.fill();cx.fillStyle='#2a8f5c';cx.fillRect(x-1,y-4,2,8)}
     if(tail&&Math.floor(beat*2)%2===0){cx.strokeStyle='#ffd23f';cx.lineWidth=1;cx.beginPath();cx.arc(x,y,6.5,0,6.283);cx.stroke()}}};
 
+function syncAlive(){return en.some(e=>e.type==='sync')}
+/* SYNCOPATOR: armoured against anything on the beat. Only OFF-BEAT shots (halfway between beats) hurt it.
+   While one is alive your cannon can fire on the off-beats on every track. */
+const SYNC_ROWS=["...ccc...","..c.c.c..",".cc.c.cc.","c...c...c","ccccccccc","c...c...c",".cc.c.cc.","..c.c.c..","...ccc..."];
+SP.sync=[spr(SYNC_ROWS,{c:'p'}),spr(SYNC_ROWS,{c:'y'})];
+EN.sync={r:[7,7],
+  update(e,dt){const k=Math.min(1,Math.max(0,(beat-stageB)/2));e.x=e.hx+34*Math.sin(beat*Math.PI/6+e.ph);e.y=e.hy+4*Math.sin(beat*Math.PI/2)-(1-k)*(1-k)*190},
+  hit(e,s){if(s.off)return true;burst(s.x,s.y,'#c9a7ff',3);pop('OFF-BEAT!',e.x,e.y-10,'#c9a7ff');sfx(t=>tone(t,103,'triangle',.04,.05));return false},
+  beat(e,b){if(b<stageB+4||b%4!==2)return;const sp=85+level*4,dx=px-e.x,dy=py-e.y,d=Math.hypot(dx,dy)||1;eb.push({x:e.x,y:e.y+5,vx:dx/d*sp,vy:Math.max(40,dy/d*sp)})},
+  draw(e){const ph=frac1(beat-travelBeats(e.y)),open=Math.abs(ph-.5)<.18;
+    if(open){cx.globalAlpha=.35;cx.fillStyle='#ff9fe8';cx.beginPath();cx.arc(e.x,e.y,8,0,6.283);cx.fill();cx.globalAlpha=1}
+    cx.drawImage(SP.sync[open?1:0],Math.round(e.x-4.5),Math.round(e.y-4.5));for(let i=0;i<e.hp;i++){cx.fillStyle='#ff9fe8';cx.fillRect(Math.round(e.x-2+i*3),Math.round(e.y+7),2,2)}}};
+
+/* CONDUCTOR (mini-boss): while it's alive it switches the whole swarm, and your cannon, between DOUBLE TIME
+   and HALF TIME every few bars. The music keeps playing; the beat you play on changes. Take it down to get back in time. */
+EN.conductor={r:[9,11],
+  update(e,dt){const k=Math.min(1,Math.max(0,(beat-stageB)/3));e.x=120+40*Math.sin(beat*Math.PI/16);e.y=148-(1-k)*(1-k)*200;e.flash=Math.max(0,(e.flash||0)-dt)},
+  beat(e,b){if(b<stageB+4)return;if(e.next===undefined)e.next=b+4;
+    if(b>=e.next){e.mode=e.mode==='double'?'half':'double';setTempoFactor(e.mode==='double'?2:.5);e.next=Math.floor(beatAt(ac.currentTime))+(e.mode==='double'?16:4);
+      pop(e.mode==='double'?'DOUBLE TIME!':'HALF TIME',120,236,'#ffd23f');sfx(t=>{tone(t,e.mode==='double'?84:67,'square',.06,.12);tone(t+.1,e.mode==='double'?91:60,'square',.06,.16)})}
+    if(b%4===0){const sp=80+level*3;for(let i=-1;i<=1;i++){const a=Math.atan2(py-e.y,px-e.x)+i*.25;eb.push({x:e.x,y:e.y+8,vx:Math.cos(a)*sp,vy:Math.max(35,Math.sin(a)*sp)})}}},
+  die(e){resetTempoKeep();pop('BACK IN TIME',120,236,'#3fe0d0');sfx(t=>[72,76,79].forEach((m,i)=>tone(t+i*.08,m,'square',.05,.1)))},
+  draw(e,fr){const x=Math.round(e.x),y=Math.round(e.y),col=e.mode==='double'?'#ffd23f':e.mode==='half'?'#4fc1ff':'#c9a7ff';
+    cx.globalAlpha=.25+.25*pulse;cx.strokeStyle=col;cx.lineWidth=1;cx.beginPath();cx.arc(x,y,14,0,6.283);cx.stroke();cx.globalAlpha=1;
+    cx.fillStyle='#4a3f86';cx.fillRect(x-8,y+6,16,4);cx.fillStyle='#8a80c0';cx.fillRect(x-1,y+3,2,4);
+    cx.fillStyle=e.flash>0?'#f4f1ff':'#1b0f3d';cx.fillRect(x-5,y-4,10,9);cx.fillStyle='#f4f1ff';cx.fillRect(x-1,y-4,2,7);cx.fillStyle='#ff4f5e';cx.fillRect(x-1,y-4,2,1);
+    cx.fillStyle='#ffd9b8';cx.beginPath();cx.arc(x,y-8,3.5,0,6.283);cx.fill();cx.fillStyle='#f4f1ff';cx.fillRect(x-4,y-12,8,2);
+    const a=-.6+Math.sin(beat*Math.PI)*.9;cx.strokeStyle='#f4f1ff';cx.lineWidth=1;cx.beginPath();cx.moveTo(x+5,y-2);cx.lineTo(x+5+Math.cos(a)*10,y-2+Math.sin(a)*10);cx.stroke();
+    cx.fillStyle=col;cx.fillRect(Math.round(x+5+Math.cos(a)*10)-1,Math.round(y-2+Math.sin(a)*10)-1,2,2);
+    cx.fillStyle='#ffffff1c';cx.fillRect(x-14,y+14,28,2);cx.fillStyle=col;cx.fillRect(x-14,y+14,28*Math.max(0,e.hp)/14,2)}};
+function resetTempoKeep(){if(tf!==1)setTempoFactor(1)}
+
 const METRO_ROWS=["....ppp....","...pyyyp...","..pyykyyp..","..pyykyyp..",".pyyykyyyp.",".pyyyyyyyp.","pyywyyywyyp","pyyyyyyyyyp","ppppppppppp"];
 SP.metro=[spr(METRO_ROWS),spr(METRO_ROWS,{y:'w'})];
 EN.metro={r:[7,7],
@@ -367,16 +406,18 @@ EN.metro={r:[7,7],
 function burst(x,y,c,n){for(let i=0;i<n;i++){const a=Math.random()*6.28,v=20+Math.random()*70;parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,c,t:0})}}
 
 /* which new enemies join each stage (boss stages 3, 6, 9... have none) */
-function waveMix(L){const fixed={2:['metro'],4:['metro','static','static'],5:['metro','metro','echo'],7:['static','static','echo','bass'],8:['metro','worm']};
-  if(fixed[L])return fixed[L];const pool=['metro','static','echo','bass','worm'],out=[],n=Math.min(4,1+Math.floor(L/4));
-  for(let i=0;i<n;i++){let t=pool[rint(pool.length)];if((t==='bass'||t==='worm')&&out.includes(t))t='static';out.push(t)}return out}
+function waveMix(L){const fixed={2:['metro'],4:['metro','static','static'],5:['metro','metro','echo'],7:['static','static','echo','bass'],8:['metro','worm'],11:['sync','sync','metro'],13:['conductor','static']};
+  if(fixed[L])return fixed[L];const pool=['metro','static','echo','bass','worm'].concat(L>=11?['sync']:[],L>=14?['conductor']:[]),out=[],n=Math.min(4,1+Math.floor(L/4));
+  for(let i=0;i<n;i++){let t=pool[rint(pool.length)];if((t==='bass'||t==='worm'||t==='conductor')&&out.includes(t))t='static';out.push(t)}return out}
 function spawnSpecials(list){const c=t=>list.filter(x=>x===t).length;
   const nm=c('metro');(nm===1?[120]:nm>=2?[78,162]:[]).forEach(ax=>en.push({type:'metro',ax,ay:30,len:0,hp:3,st:'metro',x:ax,y:30,amp:nm===1?.62:.48}));
   const ns=c('static');for(let i=0;i<ns;i++){const hx=ns===1?120:50+i*(140/(ns-1));en.push({type:'static',st:'static',hp:2,hx,hy:158,x:hx,y:-20})}
   const ne=c('echo');for(let i=0;i<ne;i++){const cxv=ne===1?120:80+i*80;en.push({type:'echo',st:'echo',hp:1,cx:cxv,cy:182,ph:i*2.1,x:cxv,y:-20})}
   if(c('bass'))en.push({type:'bass',st:'bass',hp:8,x:120,y:-40,b0:stageB+4});
+  const nsy=c('sync');for(let i=0;i<nsy;i++){const hx=nsy===1?120:70+i*(100/(nsy-1));en.push({type:'sync',st:'sync',hp:2,hx,hy:170,ph:i*1.7,x:hx,y:-20})}
+  if(c('conductor'))en.push({type:'conductor',st:'conductor',hp:14,x:120,y:-40});
   if(c('worm')){const W={n:8,hx:-12,dir:1,y:212,loud:.4},id=Math.random();for(let i=0;i<W.n;i++)en.push({type:'worm',st:'worm',worm:id,wormObj:W,idx:i,hp:1,pts:i===0?500:60,x:-40,y:-40})}}
-function spawnWave(b){en=[];stageB=b;cap=null;stageDeaths=deaths;
+function spawnWave(b){resetTempoKeep();en=[];stageB=b;cap=null;stageDeaths=deaths;
   if(level%3!==0&&level>=2)spawnSpecials(waveMix(level));
   const add=(type,row,cols)=>cols.forEach(c=>en.push({type,row,col:c,hp:type==='boss'?2:1,st:'in',x:120,y:-20}));
   if(level%3===0){const hp=30+10*(level/3-1);add('fly',3,[2,3,4,5,6,7]);
@@ -392,7 +433,7 @@ function setState(v){if(v==='title'&&chartTesting){chartTesting=false;applyChart
 let practiceStage=1,practice=false;
 function start(){if(!ac)initAudio();if(ac.state==='suspended')ac.resume();
   score=0;lives=3;combo=0;best=0;level=1;px=120;inv=0;dead=0;jam=0;shots=[];eb=[];parts=[];pops=[];en=[];
-  seedRun(nextSeed||((Date.now()^(performance.now()*1e3))>>>0));nextSeed=0;practice=practiceStage>1;boss=null;cap=null;py=296;stats={p:0,g:0,m:0};runBlind=!guides;runMods=runBlind?['blind']:[];deaths=0;stageDeaths=0;noHit=0;startMusic(false);firedBeat=-99;won=false;clearB=-1;paused=false;setState('play');
+  seedRun(nextSeed||((Date.now()^(performance.now()*1e3))>>>0));nextSeed=0;practice=practiceStage>1;resetTempo();boss=null;cap=null;py=296;stats={p:0,g:0,m:0};runBlind=!guides;runMods=runBlind?['blind']:[];deaths=0;stageDeaths=0;noHit=0;startMusic(false);firedBeat=-99;won=false;clearB=-1;paused=false;setState('play');
   if(practice){level=practiceStage;if(!song.file&&segs[0]){bpm=Math.min(song.bpm+8*(level-1),song.bpm+64);segs[0].bpm=bpm}}spawnWave(0)}
 function pick(i,preview){onLoaded=null;if(i!==sel){slideDir=i>sel?1:-1;slideT=performance.now()}sel=(i+SONGS.length)%SONGS.length;song=SONGS[sel];loadFile(song);st('sb_song',song.id);level=1;
   const c=document.querySelector('.cab');c.style.setProperty('--c1',song.c1);c.style.setProperty('--c2',song.c2);
@@ -455,9 +496,9 @@ function fire(){
   if(state!=='play'){if(!fileReady()){if(!ac)initAudio();want={preview:true};loadFile(song);decodeFile(song);return}if(state==='title'&&insertAnim)beginInsert();else if(state==='title'||(state==='over'&&performance.now()-overAt>900))start();return}
   if(paused){pauseSel?toMenu():togglePause();return}
   if(dead>0)return;
-  const g=song.sub||1,t=ac.currentTime-offset/1000,nb=Math.round(beatAt(t)*g),err=Math.abs(timeOfBeat(nb/g)-t)*1000;
+  const g=Math.max(song.sub||1,syncAlive()?2:1),t=ac.currentTime-offset/1000,nb=Math.round(beatAt(t)*g),err=Math.abs(timeOfBeat(nb/g)-t)*1000;
   if(jam>0||nb===firedBeat||err>110){stats.m++;combo=0;jam=.2;if(cap)cap.n=0;pop('MISS',px,py-12,'#ff5a4e');sfx(t0=>tone(t0,38,'sawtooth',.12,.12,900));return}
-  firedBeat=nb;combo++;best=Math.max(best,combo);
+  firedBeat=nb;combo++;best=Math.max(best,combo);const isOff=g===2&&((nb%2)+2)%2===1,n0=shots.length;
   if(err<=55)stats.p++;else stats.g++;
   if(cap){if(err<=55){cap.n++;pop('BREAK '+cap.n+'/4',px,py-12,'#ffd23f');sfx(t0=>tone(t0,84+cap.n*2,'square',.07,.08));if(cap.n>=4)breakFree()}
     else pop('NEED PERFECT',px,py-12,'#3fe0d0');return}
@@ -466,6 +507,7 @@ function fire(){
     if(mult()>=4)shots.push({x:px,y:py-10,vx:-55,p:1,c:'#ffd23f'},{x:px,y:py-10,vx:55,p:1,c:'#ffd23f'});
     sfx(t0=>tone(t0,88,'square',.07,.07,5000))}
   else{pop('GREAT',px,py-12,'#3fe0d0');shots.push({x:px,y:py-10,vx:0,p:0,c:'#3fe0d0'});sfx(t0=>tone(t0,81,'square',.06,.06,4000))}
+  for(let i=n0;i<shots.length;i++)if(isOff){shots[i].off=1;shots[i].c=shots[i].p?'#ff9fe8':'#c9a7ff'}
   if(combo%8===0&&combo<=56)pop('×'+mult(),px,py-26,'#f4f1ff');
 }
 
@@ -506,7 +548,7 @@ function update(dt){
     for(const e of en){const T=EN[e.type],R=T&&T.r||[6.5,6];if(T&&T.ghost&&T.ghost(e))continue;if(e.hp>0&&!s.dead&&Math.abs(s.x-e.x)<R[0]&&Math.abs(s.y-e.y)<R[1]){
       if(s.hit&&s.hit.includes(e))continue;(s.hit=s.hit||[]).push(e);
       if(T&&T.hit&&!T.hit(e,s)){s.dead=1;break}
-      e.hp--;if(!s.p)s.dead=1;
+      e.hp--;e.flash=.07;if(!s.p)s.dead=1;
       if(e.hp>0){burst(e.x,e.y,'#b77bff',6);sfx(t=>tone(t,60,'square',.08,.05))}
       else{const m=mult(),pts=award((e.pts||PTS[e.type])*(e.st==='dive'?2:1)*m);if(T&&T.die)T.die(e);burst(e.x,e.y,COL[e.type],14);
         if(e.st==='dive'||m>1)pop(String(pts),e.x,e.y-6,'#f4f1ff');sfx(t=>noise(t,900,.25,.18))}
@@ -827,7 +869,7 @@ function draw(){
   // HUD
   if(state!=='title'&&state!=='insert'&&state!=='chart'&&state!=='edit'&&state!=='clear'&&state!=='outro'){txt('SCORE',6,9,6,'#ff5a4e','left');txt(String(score),6,18,7,'#f4f1ff','left');
   txt('HI',120,9,6,'#ff5a4e');txt(String(Math.max(hiOf(state==='play'?hiKey():menuKey(song)),score)),120,18,7,'#f4f1ff');
-  txt('STAGE '+level,234,9,6,'#ff5a4e','right');if(practice)txt('PRACTICE',234,27,5.5,'#8a80c0','right');txt(chartOn?'SYNCED':Math.round(bpm)+' BPM',234,18,6,'#3fe0d0','right')}
+  txt('STAGE '+level,234,9,6,'#ff5a4e','right');if(practice)txt('PRACTICE',234,27,5.5,'#8a80c0','right');txt((tf===2?'×2 ':tf===.5?'×½ ':'')+(chartOn?'SYNCED':Math.round(bpm)+' BPM'),234,18,6,tf!==1?'#ffd23f':'#3fe0d0','right')}
   if(state==='play'&&boss){cx.fillStyle='#ffffff1c';cx.fillRect(60,24,120,3);cx.fillStyle=song.c1;cx.fillRect(60,24,120*Math.max(0,boss.hp)/boss.max,3)}
   if(state==='play'&&cap){txt('4 PERFECTS TO BREAK FREE',120,262,6,'#f4f1ff');for(let i=0;i<4;i++){cx.fillStyle=i<cap.n?'#ffd23f':'#ffffff26';cx.fillRect(97+i*12,268,8,6)}}
   // beat gauge
@@ -837,7 +879,7 @@ function draw(){
       cx.globalAlpha=1-d*.7;cx.fillStyle='#3fe0d0';cx.fillRect(Math.round(120-o)-1,gy-3,2,7);cx.fillRect(Math.round(120+o)-1,gy-3,2,7)}}
     else for(let k=0;k<4;k++){const d=Math.ceil(beat)+k-beat;if(d>3)continue;const o=d/3*64;
       cx.globalAlpha=1-d/3*.7;cx.fillStyle='#3fe0d0';cx.fillRect(Math.round(120-o)-1,gy-3,2,7);cx.fillRect(Math.round(120+o)-1,gy-3,2,7)}
-    if(song.sub===2)for(let k=0;k<4;k++){const d=Math.ceil(beat-.5)+.5+k-beat;if(d>3)continue;const o=d/3*64;
+    if(song.sub===2||syncAlive())for(let k=0;k<4;k++){const d=Math.ceil(beat-.5)+.5+k-beat;if(d>3)continue;const o=d/3*64;
       cx.globalAlpha=.8-d/3*.6;cx.fillStyle='#3fe0d0';cx.fillRect(Math.round(120-o)-.5,gy-1,1,3);cx.fillRect(Math.round(120+o)-.5,gy-1,1,3)}
     cx.globalAlpha=1;cx.fillStyle=`rgba(255,210,63,${.25+.75*pulse})`;cx.fillRect(117,gy-4,6,9)}
   if(state==='play'&&song.file){const f=Math.min(1,(ac.currentTime-songT0)/song.len);cx.fillStyle='#ffffff14';cx.fillRect(0,0,W,2);cx.fillStyle=song.c2;cx.fillRect(0,0,W*f,2)}
