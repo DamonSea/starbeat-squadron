@@ -43,7 +43,7 @@ Make your own note chart for any of the recorded tracks. Press Record, get a 3-2
 For precise work, open the **chart editor**. It shows a scrolling timeline with the song's hits drawn behind your notes. Scroll or drag to move through the song (or use the arrow keys, Page Up/Down and Home/End), click to add or remove notes, nudge a note with [ and ], play back at full, ¾ or ½ speed with a click on every note, and undo with ⌘Z or Ctrl+Z.
 
 ### And also
-- **8 tracks.** Four are generated live by the game: Neon Drive (synthwave), Mothership Strut (funk), Pixel Overture (chiptune) and Liquid Velocity (drum & bass). The other four are recordings: Moon Colony, Red Sky, Primate Pulse and Swarm Song. On those, the tempo stays fixed and you win by surviving to the end of the song. Red Sky follows a note chart instead of a fixed beat: 527 notes placed on the song's actual accented hits, Guitar Hero style.
+- **9 tracks.** Four are generated live by the game: Neon Drive (synthwave), Mothership Strut (funk), Pixel Overture (chiptune) and Liquid Velocity (drum & bass). The other five are recordings: Moon Colony, Red Sky, Primate Pulse, Swarm Song and Final Transmission. On those, the tempo stays fixed and you win by surviving to the end of the song. Red Sky follows a note chart instead of a fixed beat: 527 notes placed on the song's actual accented hits, Guitar Hero style.
 - **PS5 and standard controller support**, with rumble.
 - **A separate high score for each track**, plus your settings, saved in your browser.
 
@@ -72,6 +72,6 @@ Then open http://localhost:8000.
 ## Files
 
 - `index.html`: the whole game in one file (no build step, no dependencies)
-- `*.mp3`: the four recorded tracks
+- `*.mp3`: the five recorded tracks
 - `media/`: the GIFs in this README
 - `original-version/`: the first prototype, with one synthwave track

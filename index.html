@@ -98,7 +98,7 @@ h2{font-size:20px;line-height:1.2;margin:0 0 10px}
   </div>
   <div class="side">
     <h1>Pick a track, then shoot on the beat</h1>
-    <p>A Galaga-style shooter where the soundtrack is the trigger. Your cannon only fires when you hit the beat. The swarm sways, dives and shoots in time with the music, and every wave you clear pushes the tempo up 8 BPM. Faster tracks mean faster dives. Your uploaded tracks are real recordings, so they keep their tempo (on Moon Colony and Primate Pulse, half-beats count as shots too, and Red Sky is charted note by note to the song's actual hits, like a Guitar Hero chart), waves get more aggressive instead, and surviving to the end of the song wins.</p>
+    <p>A Galaga-style shooter where the soundtrack is the trigger. Your cannon only fires when you hit the beat. The swarm sways, dives and shoots in time with the music, and every wave you clear pushes the tempo up 8 BPM. Faster tracks mean faster dives. Your uploaded tracks are real recordings, so they keep their tempo (on Moon Colony, Primate Pulse and Final Transmission, half-beats count as shots too, and Red Sky is charted note by note to the song's actual hits, like a Guitar Hero chart), waves get more aggressive instead, and surviving to the end of the song wins.</p>
     <h2>Track select</h2>
     <div class="tracks" id="tracks"></div>
     <div class="keys"><kbd>← →</kbd><span>or A / D to fly</span><kbd>SPACE</kbd><span>or J to fire, on the beat</span><kbd>P</kbd><span>or Esc to pause, then resume or go back to the menu</span><kbd>PS5</kbd><span>stick or d-pad to fly, ✕ / □ / R1 / R2 to fire, Options to pause, ○ to resume</span></div>
@@ -217,7 +217,9 @@ const SONGS=[
  {id:'primate',name:'Primate Pulse',style:'Your upload',bpm:69.7674,file:'primate_pulse.mp3',gridBpm:139.535,phase:.757,len:211,loop:[0,210.7],sub:2,dif:4,
   note:'70 BPM, half-beats count · 3:31',short:'70 BPM  3:31',c1:'#c6f05a',c2:'#ff9f3f',play(){}},
  {id:'swarm',name:'Swarm Song',style:'Your upload',bpm:120,file:'swarm_song.mp3',phase:.542,len:226,loop:[0,226],sub:1,dif:3,
-  note:'120 BPM · 3:46',short:'120 BPM  3:46',c1:'#ffdd55',c2:'#7fd8ff',play(){}}
+  note:'120 BPM · 3:46',short:'120 BPM  3:46',c1:'#ffdd55',c2:'#7fd8ff',play(){}},
+ {id:'final',name:'Final Transmission',style:'Your upload',bpm:80.356,file:'final_transmission.mp3',phase:.404,len:259,loop:[0,258.35],sub:2,dif:3,
+  note:'80 BPM, half-beats count · 4:19',short:'80 BPM  4:19',c1:'#ff5ec8',c2:'#b49cff',play(){}}
 ];
 let sel=0;try{sel=Math.max(0,SONGS.findIndex(x=>x.id===st('sb_song')))}catch(e){}
 let song=SONGS[sel];
@@ -776,7 +778,7 @@ fxBox.addEventListener('click',e=>{const b=e.target.closest('button');if(b)setFx
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.key.toLowerCase()!=='f'||e.repeat)return;const i=FX.findIndex(f=>f[0]===fx);setFx(FX[(i+1)%FX.length][0])});
 setFx(fx);
 function renderChartUI(){const el=document.getElementById('chartui');if(!el)return;const x=song;
-  if(!x.file){el.innerHTML='<p>Pick one of your uploaded tracks (Moon Colony, Red Sky, Primate Pulse or Swarm Song) to make a chart for it. The built-in tracks speed up every stage, so they can\'t be charted.</p>';return}
+  if(!x.file){el.innerHTML='<p>Pick one of your uploaded tracks to make a chart for it. The built-in tracks speed up every stage, so they can\'t be charted.</p>';return}
   if(state==='edit'&&ed){el.innerHTML=`<p>Editing <b>${x.name}</b>: ${ed.notes.length} notes${ed.dirty?' (unsaved changes)':''}.</p>
     <div class="cm-row"><button data-ed="play">${ed.playing?'❚❚ Pause':'▶ Play'}</button><button data-ed="back">◀ Step</button><button data-ed="fwd">Step ▶</button><button data-ed="add">+ Add note</button><button data-ed="del">− Delete note</button><button data-ed="undo">↶ Undo</button></div>
     <div class="cm-row"><button data-ed="q">Snap: ${ed.q?'1/'+ed.q:'off'}</button><button data-ed="rate">Speed: ${ed.rate}×</button><button data-ed="clicks">Note clicks: ${ed.clicks?'on':'off'}</button><button data-ed="zin">Zoom +</button><button data-ed="zout">Zoom −</button></div>
