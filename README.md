@@ -37,6 +37,9 @@ Pausing brings up the deck with the pause key held down and the reels frozen. Fr
 
 <p align="center"><img src="media/pause.gif" width="300" alt="Cassette pause screen"></p>
 
+### Song clear
+Survive one of the recorded tracks to the end and you get a proper finale. The swarm blows up in a chain reaction, your ship launches through warp-speed stars while a fanfare plays, and a SONG CLEAR banner drops in with fireworks. Then your results tally up one line at a time: Perfects, Greats, Misses, best combo, accuracy and lives bonus. Your score counts up, an S, A, B or C rank stamps in, and NEW BEST! flashes when you beat your record. Press FIRE and the cassette ejects back to the track select while the preview fades in.
+
 ### Chart maker
 Make your own note chart for any of the recorded tracks. Press Record, get a 3-2-1 count-in, and tap Space (or FIRE, or ✕ on a controller) everywhere you want a note while the song plays. You can start recording partway through to redo just one section, snap your taps to the beat, test-play the result, and then save it. Use **Copy chart code** to share a chart, and **Paste a chart code** to load one.
 
