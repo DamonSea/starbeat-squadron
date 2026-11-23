@@ -66,6 +66,9 @@ h2{font-size:20px;line-height:1.2;margin:0 0 10px}
 .screen[data-fx=vhs] .osd{display:block}
 @keyframes grain{0%{background-position:0 0}25%{background-position:-40px 30px}50%{background-position:25px -55px}75%{background-position:-60px -20px}}
 @keyframes track{0%{top:-20%}100%{top:110%}}
+.charting .side>:not(#chartbox){display:none}
+.charting #chartbox{margin-top:0}
+.charting #chartbox>b{font-size:20px}
 .cm-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 0}
 .cm-row select{font:inherit;min-height:44px;border-radius:10px;border:1px solid #4a3a9a;background:#2a1c66;color:var(--ink);padding:0 10px}
 #chartui p{margin:8px 0 0;font-size:14px;color:var(--dim)}
@@ -272,7 +275,7 @@ function fpos(e){const sw=Math.sin(beat*Math.PI/4)*14,spread=1+.06*pulse;
   const k=Math.min(1,Math.max(0,(beat-stageB-e.row*.4-(e.col%2)*.25)/2)),q=(1-k)*(1-k);
   x+=q*(e.col<5?-170:170);y-=q*120;return[x,y]}
 
-function setState(v){if(v==='title'&&chartTesting){chartTesting=false;applyCharts()}state=v;document.querySelectorAll('#tracks button').forEach(b=>b.disabled=v==='play'||v==='insert'||v==='chart'||v==='edit');if(typeof renderChartUI==='function')renderChartUI()}
+function setState(v){if(v==='title'&&chartTesting){chartTesting=false;applyCharts()}state=v;document.body.classList.toggle('charting',v==='edit'||v==='chart');document.querySelectorAll('#tracks button').forEach(b=>b.disabled=v==='play'||v==='insert'||v==='chart'||v==='edit');if(typeof renderChartUI==='function')renderChartUI()}
 function start(){if(!ac)initAudio();if(ac.state==='suspended')ac.resume();
   score=0;lives=3;combo=0;best=0;level=1;px=120;inv=0;dead=0;jam=0;shots=[];eb=[];parts=[];pops=[];en=[];
   boss=null;cap=null;py=296;startMusic(false);firedBeat=-99;won=false;clearB=-1;paused=false;setState('play');spawnWave(0)}
@@ -492,7 +495,7 @@ function startRecord(){if(!song.file)return;if(!ac)initAudio();if(ac.state==='su
   if(!song.buf){want=null;onLoaded=startRecord;loadFile(song);decodeFile(song);chartMsg='Loading the song… recording starts as soon as it\'s ready.';renderChartUI();return}
   stopFile(false);playing=false;take=null;const lead=1.6,t0=ac.currentTime+lead;
   fileSrc=ac.createBufferSource();fileSrc.buffer=song.buf;fileGain=ac.createGain();fileSrc.connect(fileGain);fileGain.connect(master);fileSrc.start(t0,recFrom);
-  rec={id:song.id,from:recFrom,zero:t0-recFrom,start:t0,taps:[],old:workingTaps(song)};
+  rec={id:song.id,from:recFrom,zero:t0-recFrom,start:t0,taps:[],old:workingTaps(song)};try{scrollTo({top:0,behavior:'smooth'})}catch(e){}
   sfx(t=>{[1.2,.8,.4].forEach((d,i)=>tone(t+lead-d,i===2?84:72,'square',.06,.05))});chartMsg='';setState('chart')}
 function chartTap(){if(!rec)return;const t=ac.currentTime-offset/1000-rec.zero;if(t<rec.from-.15)return;rec.taps.push(+Math.max(0,t).toFixed(4));tapFlash=1;sfx(x=>tone(x,96,'square',.03,.03,5000))}
 function stopRecord(){if(!rec)return;const to=Math.min(song.len,ac.currentTime-rec.zero);stopFile(true);
@@ -519,7 +522,7 @@ function openEditor(){if(!song.file)return;if(!ac)initAudio();if(ac.state==='sus
   if(!song.buf){want=null;onLoaded=openEditor;loadFile(song);decodeFile(song);chartMsg='Loading the song… the editor opens as soon as it\'s ready.';renderChartUI();return}
   stopFile(false);playing=false;const base=take&&take.id===song.id?takeTaps():workingTaps(song);
   ed={notes:[...new Set(base.map(t=>+(+t).toFixed(4)))].sort((a,b)=>a-b),t:Math.max(0,(base[0]||0)-.5),zoom:90,q:16,rate:1,clicks:true,undo:[],playing:false,dirty:!!(take&&take.id===song.id)};
-  waveOf(song);chartMsg='';setState('edit');try{document.querySelector('.screen').scrollIntoView({block:'nearest',behavior:'smooth'})}catch(e){}}
+  waveOf(song);chartMsg='';setState('edit');try{scrollTo({top:0,behavior:'smooth'})}catch(e){}}
 function closeEditor(){if(!ed)return;edStop();if(ed.dirty)take={id:song.id,from:0,to:song.len,taps:ed.notes.slice(),old:[],q:0,edited:true};ed=null;setState('title');renderChartUI()}
 function edStop(){if(ed&&ed.playing){ed.playing=false;stopFile(false)}}
 function edTogglePlay(){if(!ed)return;if(ed.playing){edStop();renderChartUI();return}
