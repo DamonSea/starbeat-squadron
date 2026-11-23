@@ -62,6 +62,8 @@ For precise work, open the **chart editor**. It shows a scrolling timeline with 
 
 If your shots keep grading late (common with Bluetooth headphones), raise the timing offset in the settings panel.
 
+For a harder run, switch **Beat guides** off in the settings. The ring around your ship and the markers in the bottom gauge disappear, so you play entirely by ear.
+
 ## Running it locally
 
 The four built-in tracks work if you just open `index.html`. The recorded tracks load from mp3 files, and browsers block that for pages opened straight from your disk, so serve the folder instead:

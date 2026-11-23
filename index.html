@@ -107,7 +107,7 @@ h2{font-size:20px;line-height:1.2;margin:0 0 10px}
       <div><b style="color:var(--teal)">GREAT</b><span>Within 110 ms: one standard shot</span></div>
       <div><b style="color:var(--coral)">MISS</b><span>Off the beat: the cannon jams and your combo resets</span></div>
     </div>
-    <p>Every 8 on-beat shots raises your multiplier, up to ×8. Divers are worth double, and the bosses at the top take two hits. Every third stage is a boss fight against one of four skulls (the Skull Ship, Skull King, Demon Skull and Ghost Skull), each firing on the beat. When a red outline flashes under it, get out of the way: if the tractor beam from its jaw catches you, land 4 Perfect shots in a row to break free and stun it, or lose a ship. Fire when the shrinking ring closes on your ship and the markers meet in the bottom gauge.</p>
+    <p>Every 8 on-beat shots raises your multiplier, up to ×8. Divers are worth double, and the bosses at the top take two hits. Every third stage is a boss fight against one of four skulls (the Skull Ship, Skull King, Demon Skull and Ghost Skull), each firing on the beat. When a red outline flashes under it, get out of the way: if the tractor beam from its jaw catches you, land 4 Perfect shots in a row to break free and stun it, or lose a ship. Fire when the shrinking ring closes on your ship and the markers meet in the bottom gauge. For a real test, switch Beat guides off and play by ear.</p>
     <div class="set" id="chartbox" style="margin-bottom:14px">
       <b>Chart maker</b>
       <div id="chartui"></div>
@@ -117,7 +117,7 @@ h2{font-size:20px;line-height:1.2;margin:0 0 10px}
       <div class="filters" id="filters"></div>
       <label for="off">Timing offset <span id="offv">0 ms</span></label>
       <input id="off" type="range" min="-150" max="150" step="5" value="0">
-      <button id="vol">Sound: on</button> <button id="cas" aria-pressed="true">Track select: cassette</button> <button id="ins" aria-pressed="true">Start animation: on</button> <button id="tp" aria-pressed="true">Title pulse: on</button>
+      <button id="vol">Sound: on</button> <button id="gd" aria-pressed="true">Beat guides: on</button> <button id="cas" aria-pressed="true">Track select: cassette</button> <button id="ins" aria-pressed="true">Start animation: on</button> <button id="tp" aria-pressed="true">Title pulse: on</button>
       <p>If your shots keep grading late (common with Bluetooth headphones), slide the offset right.</p>
     </div>
   </div>
@@ -411,7 +411,7 @@ function update(dt){
 /* ---------- drawing ---------- */
 function txt(s,x,y,size,col,al){cx.font=size+'px "Press Start 2P",monospace';cx.textAlign=al||'center';cx.fillStyle=col;cx.fillText(s,x,y)}
 /* ---------- cassette track select ---------- */
-let titlePulse=(st('sb_tp')||'1')==='1',cassette=(st('sb_cass')||'1')==='1',slideT=-1e9,slideDir=1;
+let guides=(st('sb_guides')||'1')==='1',titlePulse=(st('sb_tp')||'1')==='1',cassette=(st('sb_cass')||'1')==='1',slideT=-1e9,slideDir=1;
 function mix(a,b,t){const h=x=>[1,3,5].map(i=>parseInt(x.slice(i,i+2),16)),A=h(a),B=h(b);return'#'+A.map((v,i)=>Math.round(v*(1-t)+B[i]*t).toString(16).padStart(2,'0')).join('')}
 function rrect(x,y,w,h,r){cx.beginPath();cx.moveTo(x+r,y);cx.arcTo(x+w,y,x+w,y+h,r);cx.arcTo(x+w,y+h,x,y+h,r);cx.arcTo(x,y+h,x,y,r);cx.arcTo(x,y,x+w,y,r);cx.closePath()}
 function reel(x,y,a){cx.fillStyle='#f4ecd8';cx.beginPath();cx.arc(x,y,8,0,6.283);cx.fill();
@@ -693,8 +693,8 @@ function draw(){
   for(const p of parts){cx.globalAlpha=1-p.t/.6;cx.fillStyle=p.c;cx.fillRect(p.x|0,p.y|0,1.5,1.5)}cx.globalAlpha=1;
   const frac=beat-Math.floor(beat);
   if(state==='play'&&dead<=0){
-    cx.strokeStyle=jam>0?'#ff5a4e':'#3fe0d0';cx.globalAlpha=.15+.6*frac;cx.lineWidth=1;
-    cx.beginPath();cx.arc(px,py,6+18*(1-frac),0,6.283);cx.stroke();cx.globalAlpha=1;
+    if(guides){cx.strokeStyle=jam>0?'#ff5a4e':'#3fe0d0';cx.globalAlpha=.15+.6*frac;cx.lineWidth=1;
+    cx.beginPath();cx.arc(px,py,6+18*(1-frac),0,6.283);cx.stroke();cx.globalAlpha=1}else if(jam>0){cx.strokeStyle='#ff5a4e';cx.globalAlpha=.6;cx.lineWidth=1;cx.beginPath();cx.arc(px,py,8,0,6.283);cx.stroke();cx.globalAlpha=1}
     if(!(inv>0&&Math.floor(inv*12)%2))cx.drawImage(SP.ship,Math.round(px-5.5),Math.round(py-6))}
   for(const p of pops){cx.globalAlpha=1-p.t/.7;txt(p.s,p.x,p.y,6,p.c)}cx.globalAlpha=1;
   // HUD
@@ -705,7 +705,8 @@ function draw(){
   if(state==='play'&&cap){txt('4 PERFECTS TO BREAK FREE',120,262,6,'#f4f1ff');for(let i=0;i<4;i++){cx.fillStyle=i<cap.n?'#ffd23f':'#ffffff26';cx.fillRect(97+i*12,268,8,6)}}
   // beat gauge
   const gy=313;cx.fillStyle='#ffffff18';cx.fillRect(52,gy,136,1);
-  if(state==='play'||state==='title'){if(chartOn&&ac){const now=ac.currentTime,b0=Math.ceil(beat);for(let k=0;k<14;k++){const d=(timeOfBeat(b0+k)-now)/1.7;if(d>1)break;if(d<0)continue;const o=d*64;
+  if(state==='play'&&!guides)txt('BLIND',120,gy+3,6,'#ffffff38');
+  else if(state==='play'||state==='title'){if(chartOn&&ac){const now=ac.currentTime,b0=Math.ceil(beat);for(let k=0;k<14;k++){const d=(timeOfBeat(b0+k)-now)/1.7;if(d>1)break;if(d<0)continue;const o=d*64;
       cx.globalAlpha=1-d*.7;cx.fillStyle='#3fe0d0';cx.fillRect(Math.round(120-o)-1,gy-3,2,7);cx.fillRect(Math.round(120+o)-1,gy-3,2,7)}}
     else for(let k=0;k<4;k++){const d=Math.ceil(beat)+k-beat;if(d>3)continue;const o=d/3*64;
       cx.globalAlpha=1-d/3*.7;cx.fillStyle='#3fe0d0';cx.fillRect(Math.round(120-o)-1,gy-3,2,7);cx.fillRect(Math.round(120+o)-1,gy-3,2,7)}
@@ -827,6 +828,9 @@ setCas(cassette);cas.addEventListener('click',()=>setCas(!cassette));
 const ins=document.getElementById('ins');
 const setIns=v=>{insertAnim=v;st('sb_ins',v?'1':'0');ins.textContent='Start animation: '+(v?'on':'off');ins.setAttribute('aria-pressed',v)};
 setIns(insertAnim);ins.addEventListener('click',()=>setIns(!insertAnim));
+const gdb=document.getElementById('gd');
+const setGd=v=>{guides=v;st('sb_guides',v?'1':'0');gdb.textContent='Beat guides: '+(v?'on':'off (blind)');gdb.setAttribute('aria-pressed',v)};
+setGd(guides);gdb.addEventListener('click',()=>setGd(!guides));
 const tpb=document.getElementById('tp');
 const setTp=v=>{titlePulse=v;st('sb_tp',v?'1':'0');tpb.textContent='Title pulse: '+(v?'on':'off');tpb.setAttribute('aria-pressed',v)};
 setTp(titlePulse);tpb.addEventListener('click',()=>setTp(!titlePulse));
