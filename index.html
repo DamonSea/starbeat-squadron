@@ -100,6 +100,7 @@ h2{font-size:20px;line-height:1.2;margin:0 0 10px}
   <div class="side">
     <p class="preview">B-Sides preview build. Your live game stays on v1.0.</p>
     <p style="font-size:15px"><b style="color:var(--ink)">New enemies:</b> Metronome (only Perfects crack it) · Static (only solid on the beat) · Echo (hit it twice, one beat apart) · Bass Drop (break it or dodge the slam) · Tape Worm (shoot the tail first) · Syncopator (only off-beat shots hurt it) · Conductor (switches you between double and half time). Use <b style="color:var(--ink)">Practice</b> in the settings to jump to them.</p>
+    <p style="font-size:15px"><b style="color:var(--ink)">New mechanics:</b> hold notes (long yellow markers: fire and keep holding for a laser) · Fever (32 Perfects in a row) · tempo shifts on built-in tracks from stage 4 · skull bosses play a rhythm for you to fire back.</p>
     <h1>Pick a track, then shoot on the beat</h1>
     <p>A Galaga-style shooter where your cannon only fires on the beat. Built-in tracks speed up with every wave you clear; on recorded tracks, survive to the end of the song.</p>
     <h2>Track select</h2>
@@ -164,8 +165,9 @@ const COL={bee:'#ffd23f',fly:'#ff4f5e',boss:'#4ee39a',metro:'#c9a7ff',static:'#f
 
 /* ---------- audio ---------- */
 let ac=null,master,noiseBuf,gtrIn,bpm=104,pendBpm=0,segs=[{b:0,t:0,bpm:104}],step=0,nextT=0,playing=false,level=1;
+let fxShelf=null;
 function initAudio(){ac=new(window.AudioContext||window.webkitAudioContext)();master=ac.createGain();master.gain.value=muted?0:.5;
-  const comp=ac.createDynamicsCompressor();master.connect(comp);comp.connect(ac.destination);
+  const comp=ac.createDynamicsCompressor();fxShelf=ac.createBiquadFilter();fxShelf.type='highshelf';fxShelf.frequency.value=2500;fxShelf.gain.value=0;master.connect(fxShelf);fxShelf.connect(comp);comp.connect(ac.destination);
   noiseBuf=ac.createBuffer(1,ac.sampleRate*1,ac.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
   // distortion bus for the alt-rock guitar
   gtrIn=ac.createGain();const ws=ac.createWaveShaper(),cv2=new Float32Array(1024),k=22;
@@ -317,8 +319,8 @@ EN.echo={r:[7,6],
     if(e.split&&beat-e.hb>1.35){e.split=false;pop('REFORMED',e.x,e.y-10,'#4fc1ff');sfx(t=>tone(t,55,'sawtooth',.08,.15,1200));
       const sp=90+level*4,dx=px-e.x,dy=py-e.y,d=Math.hypot(dx,dy)||1;eb.push({x:e.x,y:e.y+5,vx:dx/d*sp,vy:Math.max(40,dy/d*sp)})}},
   hit(e,s){const b=beatAt(ac.currentTime);
-    if(!e.split){e.split=true;e.hb=b;pop('ECHO!',e.x,e.y-10,'#4fc1ff');sfx(t=>{tone(t,76,'triangle',.06,.2);tone(t+.12,76,'triangle',.03,.2)});return false}
-    const d=b-e.hb;if(d>=.72&&d<=1.3)return true;if(d>.12){pop('TOO SOON',e.x,e.y-10,'#8a80c0')}return false},
+    if(!e.split){e.split=true;e.hb=b;if(!s.laser)pop('ECHO!',e.x,e.y-10,'#4fc1ff');sfx(t=>{tone(t,76,'triangle',.06,.2);tone(t+.12,76,'triangle',.03,.2)});return false}
+    const d=b-e.hb;if(d>=.72&&d<=1.3)return true;if(d>.12&&!s.laser){pop('TOO SOON',e.x,e.y-10,'#8a80c0')}return false},
   draw(e,fr){if(e.split){const d=Math.min(1,beat-e.hb);cx.globalAlpha=.4*(1-d*.5);cx.drawImage(SP.echo[1],Math.round(e.x-4.5+6+d*10),Math.round(e.y-4));cx.globalAlpha=1;
       const r=4+12*(1-d);cx.strokeStyle='#a8f0ff';cx.globalAlpha=.5+.5*d;cx.lineWidth=1;cx.beginPath();cx.arc(e.x,e.y,r,0,6.283);cx.stroke();cx.globalAlpha=1}
     cx.drawImage(SP.echo[fr],Math.round(e.x-4.5),Math.round(e.y-4))}};
@@ -351,7 +353,7 @@ EN.worm={r:[5,5],
       if(W0.dir>0&&W0.hx-len>250)W0.hx=-12;if(W0.dir<0&&W0.hx+len<-10)W0.hx=252;W0.loud+=(loudNow()-W0.loud)*Math.min(1,dt*6)}
     const k=Math.min(1,Math.max(0,(beat-stageB)/2)),xi=W0.hx-W0.dir*e.idx*9,amp=5+W0.loud*20;
     e.x=xi;e.y=W0.y+amp*Math.sin(xi*.07-beat*Math.PI)-(1-k)*(1-k)*240},
-  hit(e,s){if(e.idx===EN.worm.tailIdx(e))return true;burst(s.x,s.y,'#9dff6b',3);sfx(t=>tone(t,98,'triangle',.03,.04));return false},
+  hit(e,s){if(e.idx===EN.worm.tailIdx(e))return true;if(s.laser)return false;burst(s.x,s.y,'#9dff6b',3);sfx(t=>tone(t,98,'triangle',.03,.04));return false},
   beat(e,b){if(e.idx!==0||b<stageB+4||b%8!==0)return;const sp=80+level*4,dx=px-e.x,dy=py-e.y,d=Math.hypot(dx,dy)||1;eb.push({x:e.x,y:e.y+4,vx:dx/d*sp,vy:Math.max(40,dy/d*sp)})},
   draw(e,fr){const x=Math.round(e.x),y=Math.round(e.y),tail=e.idx===EN.worm.tailIdx(e);
     if(e.idx===0){cx.fillStyle='#4ee39a';cx.beginPath();cx.arc(x,y,5,0,6.283);cx.fill();cx.fillStyle='#05031a';cx.fillRect(x-3,y-2,2,2);cx.fillRect(x+1,y-2,2,2);cx.fillStyle='#ff4f5e';cx.fillRect(x-1,y+2,2,1)}
@@ -365,7 +367,7 @@ const SYNC_ROWS=["...ccc...","..c.c.c..",".cc.c.cc.","c...c...c","ccccccccc","c.
 SP.sync=[spr(SYNC_ROWS,{c:'p'}),spr(SYNC_ROWS,{c:'y'})];
 EN.sync={r:[7,7],
   update(e,dt){const k=Math.min(1,Math.max(0,(beat-stageB)/2));e.x=e.hx+34*Math.sin(beat*Math.PI/6+e.ph);e.y=e.hy+4*Math.sin(beat*Math.PI/2)-(1-k)*(1-k)*190},
-  hit(e,s){if(s.off)return true;burst(s.x,s.y,'#c9a7ff',3);pop('OFF-BEAT!',e.x,e.y-10,'#c9a7ff');sfx(t=>tone(t,103,'triangle',.04,.05));return false},
+  hit(e,s){if(s.off)return true;if(s.laser)return false;burst(s.x,s.y,'#c9a7ff',3);pop('OFF-BEAT!',e.x,e.y-10,'#c9a7ff');sfx(t=>tone(t,103,'triangle',.04,.05));return false},
   beat(e,b){if(b<stageB+4||b%4!==2)return;const sp=85+level*4,dx=px-e.x,dy=py-e.y,d=Math.hypot(dx,dy)||1;eb.push({x:e.x,y:e.y+5,vx:dx/d*sp,vy:Math.max(40,dy/d*sp)})},
   draw(e){const ph=frac1(beat-travelBeats(e.y)),open=Math.abs(ph-.5)<.18;
     if(open){cx.globalAlpha=.35;cx.fillStyle='#ff9fe8';cx.beginPath();cx.arc(e.x,e.y,8,0,6.283);cx.fill();cx.globalAlpha=1}
@@ -397,12 +399,66 @@ EN.metro={r:[7,7],
     // how many beats an on-beat shot needs to reach the bob, so the bottom of the swing meets it
     const b0=Math.floor(beat),bl=Math.max(.15,timeOfBeat(b0+1)-timeOfBeat(b0)),travel=((py-10)-(e.ay+e.len))/270/bl;
     const th=(e.amp||.62)*Math.sin(Math.PI*(beat-travel));e.th=th;e.x=e.ax+e.len*Math.sin(th);e.y=e.ay+e.len*Math.cos(th);e.flash=Math.max(0,(e.flash||0)-dt)},
-  hit(e,s){if(s.p)return true;e.flash=.12;burst(s.x,s.y,'#f4f1ff',4);pop('CLINK',e.x,e.y+12,'#c9a7ff');sfx(t=>{tone(t,100,'triangle',.05,.06);tone(t,107,'triangle',.03,.08)});return false},
+  hit(e,s){if(s.p)return true;if(s.laser)return false;e.flash=.12;burst(s.x,s.y,'#f4f1ff',4);pop('CLINK',e.x,e.y+12,'#c9a7ff');sfx(t=>{tone(t,100,'triangle',.05,.06);tone(t,107,'triangle',.03,.08)});return false},
   beat(e,b){if(b<stageB+4||level<4||b%4!==0)return;const sp=80+level*5,dx=px-e.x,dy=py-e.y,d=Math.hypot(dx,dy)||1;eb.push({x:e.x,y:e.y+6,vx:dx/d*sp,vy:Math.max(40,dy/d*sp)})},
   draw(e,fr){cx.fillStyle='#8a80c0';cx.fillRect(e.ax-5,e.ay-4,11,3);cx.strokeStyle='#8a80c0aa';cx.lineWidth=1;cx.beginPath();cx.moveTo(e.ax+.5,e.ay);cx.lineTo(e.x+.5,e.y-4);cx.stroke();
     const near=Math.abs(e.th||0)<.12;if(near){cx.globalAlpha=.35;cx.fillStyle='#ffd23f';cx.beginPath();cx.arc(e.x,e.y,9,0,6.283);cx.fill();cx.globalAlpha=1}
     cx.drawImage(SP.metro[(e.flash>0)?1:0],Math.round(e.x-5.5),Math.round(e.y-4.5));
     for(let i=0;i<e.hp;i++){cx.fillStyle='#ffd23f';cx.fillRect(Math.round(e.x-4+i*3),Math.round(e.y+6),2,2)}}};
+/* HOLD NOTES: every four bars one beat is a hold (2 beats long, 4 from stage 6). Fire on it and keep the button
+   held: your ship fires a laser until the note ends. Let go early and it drops. */
+function holdLen(b){if(state!=='play'||boss||b<stageB+8||clearB>=0)return 0;return((b-stageB)%16===8)?(level>=6?4:2):0}
+function startLaser(b,perfect){const L=holdLen(b);laser={until:timeOfBeat(b+L),len:L,t0:ac.currentTime,tick:0,perfect};pop('HOLD!',px,py-24,'#ffd23f');
+  try{const o=ac.createOscillator(),f=ac.createBiquadFilter(),g=ac.createGain();o.type='sawtooth';o.frequency.value=110;f.type='lowpass';f.frequency.value=900;g.gain.value=.0001;
+    g.gain.exponentialRampToValueAtTime(muted?.0001:.05,ac.currentTime+.05);o.connect(f);f.connect(g);g.connect(master);o.start();laserOsc={o,g}}catch(e){}}
+function endLaser(){if(laserOsc){try{laserOsc.g.gain.setTargetAtTime(.0001,ac.currentTime,.03);laserOsc.o.stop(ac.currentTime+.2)}catch(e){}laserOsc=null}}
+function updLaser(dt){if(!laser)return;const now=ac.currentTime;
+  if(!fireHeld()&&now<laser.until-.08){pop('DROPPED',px,py-24,'#ff5a4e');endLaser();laser=null;return}
+  if(now>=laser.until){const b=award(250*laser.len*mult());pop('HOLD +'+b,px,py-24,'#ffd23f');sfx(t=>{tone(t,88,'square',.05,.08);tone(t+.08,93,'square',.05,.12)});endLaser();laser=null;return}
+  laser.tick-=dt;if(laser.tick>0)return;laser.tick=.09;
+  for(const e of en){const T=EN[e.type],R=T&&T.r||[6.5,6];if(e.hp<=0||e.y>py-8||Math.abs(e.x-px)>R[0]+2)continue;if(T&&T.ghost&&T.ghost(e))continue;hitEnemy(e,{x:e.x,y:e.y,p:1,laser:1})}
+  en=en.filter(e=>e.hp>0);
+  if(boss&&Math.abs(boss.x-px)<17){boss.hp-=beat<boss.stunTo?2:1;boss.flash=.05;if(boss.hp<=0)killBoss()}}
+function drawLaser(){if(!laser)return;const w=2+Math.sin(performance.now()/30);cx.globalAlpha=.35;cx.fillStyle=song.c1;cx.fillRect(Math.round(px-w-2),0,Math.round(w*2+4),py-8);
+  cx.globalAlpha=.95;cx.fillStyle='#fff7d6';cx.fillRect(Math.round(px-1),0,2,py-8);cx.globalAlpha=1;
+  const u=Math.min(1,(ac.currentTime-laser.t0)/(laser.until-laser.t0));cx.strokeStyle='#ffd23f';cx.lineWidth=2;cx.beginPath();cx.arc(px,py,11,-Math.PI/2,-Math.PI/2+u*6.283);cx.stroke()}
+
+/* FEVER: 32 Perfects in a row. For 8 beats the music brightens, the screen glows, every shot pierces and points double. */
+function feverStart(){fever={until:Math.floor(beat)+8};pop('FEVER!',120,240,'#ff9fe8');rumble(.4,.6,300);
+  sfx(t=>{[84,88,91,96].forEach((m,i)=>tone(t+i*.06,m,'square',.05,.1,6000))});try{fxShelf.gain.setTargetAtTime(9,ac.currentTime,.05)}catch(e){}}
+function feverEnd(){if(!fever)return;fever=null;try{fxShelf.gain.setTargetAtTime(0,ac.currentTime,.1)}catch(e){}}
+
+/* TEMPO SHIFTS (built-in tracks, stage 4+): once per wave the beat drops to half time or jumps to double time for two bars,
+   with a countdown so you can see it coming. */
+function planShift(){shift=null;if(song.file||level<4||level%3===0||en.some(e=>e.type==='conductor'))return;
+  shift={at:stageB+4+4*(2+rint(3)),mode:rng()<.5?'half':'double',on:false}}
+function shiftBeat(b){if(!shift)return;
+  if(!shift.on&&b>=shift.at-4&&b<shift.at){const n=shift.at-b;pop((shift.mode==='half'?'HALF TIME IN ':'DOUBLE TIME IN ')+n,120,236,'#ffd23f');sfx(t=>tone(t,n===1?84:79,'square',.04,.06))}
+  else if(!shift.on&&b>=shift.at){setTempoFactor(shift.mode==='half'?.5:2);shift.on=true;shift.end=Math.floor(beatAt(ac.currentTime))+(shift.mode==='half'?4:16);pop(shift.mode==='half'?'HALF TIME':'DOUBLE TIME!',120,236,'#ffd23f')}
+  else if(shift.on&&b>=shift.end){setTempoFactor(1);shift=null;pop('BACK IN TIME',120,236,'#3fe0d0')}}
+
+/* CALL AND RESPONSE (skull bosses, every other attack cycle): the boss plays a one-bar rhythm on eighth notes, then
+   you fire it back in the next bar. Match it exactly to stun the boss; miss it and the boss retaliates. */
+const crActive=()=>!!cr&&beat>=cr.callB-.3&&beat<cr.respB+4;
+function crStart(b){const pat=[true];for(let i=1;i<8;i++)pat.push(rng()<.38);
+  cr={pat,hits:Array(8).fill(false),wrong:0,callB:b,respB:b+4,flash:-1};
+  pat.forEach((on,i)=>{if(on)sfx(t=>{const at=timeOfBeat(b+i*.5)-ac.currentTime;if(at>=0)tone(t+at,88+(i%4)*2,'square',.06,.09,5000)})})}
+function crEnd(b){if(!cr)return;const ok=cr.pat.every((on,i)=>!on||cr.hits[i])&&cr.wrong===0;
+  if(ok){boss.stunTo=b+4;const p=award(3000*mult());pop('PERFECT ECHO +'+p,120,200,'#ffd23f');sfx(t=>[72,76,79,84].forEach((m,i)=>tone(t+i*.07,m,'square',.05,.1)))}
+  else{pop('OFF TUNE',120,boss.y+44,'#ff5a4e');bfan(9);bspread(5);sfx(t=>tone(t,40,'sawtooth',.12,.3,800))}cr=null}
+function drawCr(){if(!cr||!boss)return;const x0=Math.round(Math.max(6,Math.min(170,boss.x-31))),y=Math.round(boss.y+20),resp=beat>=cr.respB-.3;
+  cx.fillStyle='#05031acc';cx.fillRect(x0-4,y-11,70,20);txt(resp?'YOUR TURN':'LISTEN',x0+31,y-3,6,resp?'#3fe0d0':'#ffd23f');
+  for(let i=0;i<8;i++){const x=x0+i*8,on=cr.pat[i],played=beat>=cr.callB+i*.5;
+    if(!resp){cx.fillStyle=on&&played?'#ffd23f':'#ffffff22';cx.fillRect(x,y,6,5)}
+    else{cx.fillStyle=cr.hits[i]?'#3fe0d0':cr.flash===i?'#ff5a4e':'#ffffff14';cx.fillRect(x,y,6,5);if(on){cx.strokeStyle='#ffd23f';cx.lineWidth=1;cx.strokeRect(x+.5,y+.5,5,4)}
+      if(Math.abs(beat-(cr.respB+i*.5))<.25){cx.fillStyle='#f4f1ff';cx.fillRect(x,y+6,6,1)}}}}
+
+function hitEnemy(e,s){const T=EN[e.type];
+  if(T&&T.hit&&!T.hit(e,s)){s.dead=1;return}
+  e.hp--;e.flash=.07;if(!s.p)s.dead=1;
+  if(e.hp>0){if(!s.laser){burst(e.x,e.y,'#b77bff',6);sfx(t=>tone(t,60,'square',.08,.05))}}
+  else{const m=mult(),pts=award((e.pts||PTS[e.type])*(e.st==='dive'?2:1)*m);if(T&&T.die)T.die(e);burst(e.x,e.y,COL[e.type],14);
+    if(e.st==='dive'||m>1)pop(String(pts),e.x,e.y-6,'#f4f1ff');sfx(t=>noise(t,900,.25,.18))}}
 function burst(x,y,c,n){for(let i=0;i<n;i++){const a=Math.random()*6.28,v=20+Math.random()*70;parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,c,t:0})}}
 
 /* which new enemies join each stage (boss stages 3, 6, 9... have none) */
@@ -419,6 +475,7 @@ function spawnSpecials(list){const c=t=>list.filter(x=>x===t).length;
   if(c('worm')){const W={n:8,hx:-12,dir:1,y:212,loud:.4},id=Math.random();for(let i=0;i<W.n;i++)en.push({type:'worm',st:'worm',worm:id,wormObj:W,idx:i,hp:1,pts:i===0?500:60,x:-40,y:-40})}}
 function spawnWave(b){resetTempoKeep();en=[];stageB=b;cap=null;stageDeaths=deaths;
   if(level%3!==0&&level>=2)spawnSpecials(waveMix(level));
+  cr=null;planShift();
   const add=(type,row,cols)=>cols.forEach(c=>en.push({type,row,col:c,hp:type==='boss'?2:1,st:'in',x:120,y:-20}));
   if(level%3===0){const hp=30+10*(level/3-1);add('fly',3,[2,3,4,5,6,7]);
     boss={kind:SKULLS[(level/3-1)%4],x:120,y:-40,hp,max:hp,tx:120,warnAt:-99,beamFrom:-99,beamTo:-99,stunTo:-99,flash:0};sfx(t=>{tone(t,57,'sawtooth',.1,.5,1200);tone(t+.5,57,'sawtooth',.1,.5,1200)});return}
@@ -433,7 +490,7 @@ function setState(v){if(v==='title'&&chartTesting){chartTesting=false;applyChart
 let practiceStage=1,practice=false;
 function start(){if(!ac)initAudio();if(ac.state==='suspended')ac.resume();
   score=0;lives=3;combo=0;best=0;level=1;px=120;inv=0;dead=0;jam=0;shots=[];eb=[];parts=[];pops=[];en=[];
-  seedRun(nextSeed||((Date.now()^(performance.now()*1e3))>>>0));nextSeed=0;practice=practiceStage>1;resetTempo();boss=null;cap=null;py=296;stats={p:0,g:0,m:0};runBlind=!guides;runMods=runBlind?['blind']:[];deaths=0;stageDeaths=0;noHit=0;startMusic(false);firedBeat=-99;won=false;clearB=-1;paused=false;setState('play');
+  seedRun(nextSeed||((Date.now()^(performance.now()*1e3))>>>0));nextSeed=0;practice=practiceStage>1;resetTempo();endLaser();laser=null;perfStreak=0;feverEnd();shift=null;cr=null;boss=null;cap=null;py=296;stats={p:0,g:0,m:0};runBlind=!guides;runMods=runBlind?['blind']:[];deaths=0;stageDeaths=0;noHit=0;startMusic(false);firedBeat=-99;won=false;clearB=-1;paused=false;setState('play');
   if(practice){level=practiceStage;if(!song.file&&segs[0]){bpm=Math.min(song.bpm+8*(level-1),song.bpm+64);segs[0].bpm=bpm}}spawnWave(0)}
 function pick(i,preview){onLoaded=null;if(i!==sel){slideDir=i>sel?1:-1;slideT=performance.now()}sel=(i+SONGS.length)%SONGS.length;song=SONGS[sel];loadFile(song);st('sb_song',song.id);level=1;
   const c=document.querySelector('.cab');c.style.setProperty('--c1',song.c1);c.style.setProperty('--c2',song.c2);
@@ -459,7 +516,8 @@ const hw=y=>6+Math.max(0,(y-(boss.y+11))/(304-(boss.y+11)))*16;
 function bshot(a,sp){eb.push({x:boss.x,y:boss.y+10,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp})}
 function bspread(n){const a0=Math.max(.5,Math.min(Math.PI-.5,Math.atan2(py-boss.y,px-boss.x)));for(let i=0;i<n;i++)bshot(a0+(i-(n-1)/2)*.22,80+level*4)}
 function bfan(n){for(let i=0;i<n;i++)bshot(Math.PI/2+(i-(n-1)/2)*.28,70+level*4)}
-function bossBeat(b){const B=boss,r=(b-stageB-4)%16,stun=b<B.stunTo,beaming=b>=B.warnAt&&b<B.beamTo;
+function bossBeat(b){const B=boss,r=(b-stageB-4)%16,cyc=Math.floor((b-stageB-4)/16),stun=b<B.stunTo,beaming=b>=B.warnAt&&b<B.beamTo;
+  if(cyc%2===1){if(!cr&&!cap&&!stun&&r<=4&&B.crCyc!==cyc){B.crCyc=cyc;crStart(b)}if(cr&&b>=cr.respB+4)crEnd(b);if(cr||r<=8)return}
   if(r===8&&!cap&&!stun){B.tx=Math.max(30,Math.min(210,px));B.warnAt=b;B.beamFrom=b+2;B.beamTo=b+8;
     sfx(t=>{tone(t,64,'square',.07,.12);tone(t+.18,64,'square',.07,.12)})}
   else if(!stun&&!beaming&&!cap){if(r%8===4)bfan(7);else if(r%2===0)bspread(3)}}
@@ -481,6 +539,7 @@ function onBeat(b){
   if(state!=='play')return;
   if(clearB>=0&&b>=clearB){clearB=-1;spawnWave(b)}
   if(b<stageB+4||clearB>=0)return;
+  shiftBeat(b);
   if(boss)bossBeat(b);
   for(const e of en){const T=EN[e.type];if(T&&T.beat)T.beat(e,b)}
   if(b%8===0)for(let i=0;i<Math.min(1+Math.floor(level/2),4);i++)launch(b);
@@ -496,13 +555,15 @@ function fire(){
   if(state!=='play'){if(!fileReady()){if(!ac)initAudio();want={preview:true};loadFile(song);decodeFile(song);return}if(state==='title'&&insertAnim)beginInsert();else if(state==='title'||(state==='over'&&performance.now()-overAt>900))start();return}
   if(paused){pauseSel?toMenu():togglePause();return}
   if(dead>0)return;
-  const g=Math.max(song.sub||1,syncAlive()?2:1),t=ac.currentTime-offset/1000,nb=Math.round(beatAt(t)*g),err=Math.abs(timeOfBeat(nb/g)-t)*1000;
-  if(jam>0||nb===firedBeat||err>110){stats.m++;combo=0;jam=.2;if(cap)cap.n=0;pop('MISS',px,py-12,'#ff5a4e');sfx(t0=>tone(t0,38,'sawtooth',.12,.12,900));return}
+  const g=Math.max(song.sub||1,syncAlive()||crActive()?2:1),t=ac.currentTime-offset/1000,nb=Math.round(beatAt(t)*g),err=Math.abs(timeOfBeat(nb/g)-t)*1000;
+  if(jam>0||nb===firedBeat||err>110){stats.m++;combo=0;perfStreak=0;jam=.2;if(cap)cap.n=0;pop('MISS',px,py-12,'#ff5a4e');sfx(t0=>tone(t0,38,'sawtooth',.12,.12,900));return}
   firedBeat=nb;combo++;best=Math.max(best,combo);const isOff=g===2&&((nb%2)+2)%2===1,n0=shots.length;
-  if(err<=55)stats.p++;else stats.g++;
+  if(err<=55){stats.p++;perfStreak++;if(perfStreak>=32&&!fever){perfStreak=0;feverStart()}}else{stats.g++;perfStreak=0}
+  if(cr&&beat>=cr.respB-.3&&beat<cr.respB+3.75){const sl=nb-cr.respB*2;if(sl>=0&&sl<8){if(cr.pat[sl])cr.hits[sl]=true;else{cr.wrong++;cr.flash=sl}}}
   if(cap){if(err<=55){cap.n++;pop('BREAK '+cap.n+'/4',px,py-12,'#ffd23f');sfx(t0=>tone(t0,84+cap.n*2,'square',.07,.08));if(cap.n>=4)breakFree()}
     else pop('NEED PERFECT',px,py-12,'#3fe0d0');return}
-  if(err<=55){pop('PERFECT',px,py-12,'#ffd23f');
+  const bi=nb/g;if(Number.isInteger(bi)&&holdLen(bi)&&!laser)startLaser(bi,err<=55);
+  if(err<=55||fever){pop(err<=55?'PERFECT':'GREAT',px,py-12,err<=55?'#ffd23f':'#3fe0d0');
     shots.push({x:px-4,y:py-10,vx:0,p:1,c:'#ffd23f'},{x:px+4,y:py-10,vx:0,p:1,c:'#ffd23f'});
     if(mult()>=4)shots.push({x:px,y:py-10,vx:-55,p:1,c:'#ffd23f'},{x:px,y:py-10,vx:55,p:1,c:'#ffd23f'});
     sfx(t0=>tone(t0,88,'square',.07,.07,5000))}
@@ -512,7 +573,7 @@ function fire(){
 }
 
 let overAt=0;
-function die(){lives--;deaths++;rumble(.9,.5,260);cap=null;burst(px,py,'#f4f1ff',30);burst(px,py,'#ff5a4e',20);sfx(t=>noise(t,300,.5,.5));
+function die(){endLaser();laser=null;perfStreak=0;feverEnd();lives--;deaths++;rumble(.9,.5,260);cap=null;burst(px,py,'#f4f1ff',30);burst(px,py,'#ff5a4e',20);sfx(t=>noise(t,300,.5,.5));
   combo=0;eb=[];dead=1;inv=2.6;
   if(lives<=0)endGame()}
 function endGame(){setState('over');playing=false;stopFile(true);overAt=performance.now();newHi=score>hiOf(hiKey());
@@ -547,12 +608,8 @@ function update(dt){
   for(const s of shots){s.y-=270*dt;s.x+=s.vx*dt;
     for(const e of en){const T=EN[e.type],R=T&&T.r||[6.5,6];if(T&&T.ghost&&T.ghost(e))continue;if(e.hp>0&&!s.dead&&Math.abs(s.x-e.x)<R[0]&&Math.abs(s.y-e.y)<R[1]){
       if(s.hit&&s.hit.includes(e))continue;(s.hit=s.hit||[]).push(e);
-      if(T&&T.hit&&!T.hit(e,s)){s.dead=1;break}
-      e.hp--;e.flash=.07;if(!s.p)s.dead=1;
-      if(e.hp>0){burst(e.x,e.y,'#b77bff',6);sfx(t=>tone(t,60,'square',.08,.05))}
-      else{const m=mult(),pts=award((e.pts||PTS[e.type])*(e.st==='dive'?2:1)*m);if(T&&T.die)T.die(e);burst(e.x,e.y,COL[e.type],14);
-        if(e.st==='dive'||m>1)pop(String(pts),e.x,e.y-6,'#f4f1ff');sfx(t=>noise(t,900,.25,.18))}
-      if(s.dead)break}}}
+      hitEnemy(e,s);if(s.dead)break}}}
+  updLaser(dt);if(fever&&beat>=fever.until)feverEnd();
   if(boss){updBoss(dt);if(state!=='play')return}
   shots=shots.filter(s=>!s.dead&&s.y>-8&&s.x>-8&&s.x<W+8);
   en=en.filter(e=>e.hp>0);
@@ -782,13 +839,15 @@ function drawChartRec(){if(!rec)return;const now=ac.currentTime-rec.zero,HY=205,
   if(now<rec.from){const n=Math.ceil(rec.from-now);txt(n>0?String(Math.min(3,Math.ceil((rec.start-ac.currentTime)/.4))):'',120,140,18,'#ffd23f')}
   txt('SPACE TAP   ESC STOP',120,312,6,'#b9b0e6')}
 /* ---------- song clear finale + way back to the menu ---------- */
+let laser=null,laserOsc=null,keyHeld=false,ptrHeld=false,padHeld=false,perfStreak=0,fever=null,shift=null,cr=null;
+const fireHeld=()=>keyHeld||ptrHeld||padHeld;
 let runBlind=false,deaths=0,stageDeaths=0,noHit=0,runMods=[];
 /* modifiers: each has a score multiplier and a tag in the high-score key. 'blind' keeps the v1 key format (id_blind). */
 const MODS={blind:{mult:1.5,tag:'blind'}};
 const scoreMult=()=>runMods.reduce((m,k)=>m*(MODS[k]?MODS[k].mult:1),1);
 const keyFor=(id,mods)=>id+mods.filter(k=>MODS[k]).sort().map(k=>'_'+MODS[k].tag).join('');
 const BL=scoreMult,hiKey=()=>practice?'__practice':keyFor(song.id,runMods),menuKey=x=>keyFor(x.id,guides?[]:['blind']);
-function award(p){const v=Math.round(p*BL());score+=v;return v}
+function award(p){const v=Math.round(p*BL()*(fever?2:1));score+=v;return v}
 let stats={p:0,g:0,m:0},warp=1,clr=null,outT=0,titleFade=0;
 function beginClear(){const bonus=Math.round(lives*5000*BL()),flaw=deaths===0?Math.round(25000*BL()):0,total=score+bonus+flaw,hit=stats.p+stats.g+stats.m,acc=hit?(stats.p+stats.g*.5)/hit:0;
   clr={t0:performance.now(),base:score,bonus,total,acc,rank:acc>=.92?'S':acc>=.8?'A':acc>=.65?'B':'C',newHi:total>hiOf(hiKey()),flaw,blind:runBlind,sx:px,shown:0,slam:false,fw:0,ticks:0};
@@ -861,6 +920,7 @@ function draw(){
   for(const b of eb){cx.fillStyle='#ff5a4e';cx.fillRect(Math.round(b.x)-1,Math.round(b.y)-2,2,4);cx.fillStyle='#fff';cx.fillRect(Math.round(b.x)-.5,Math.round(b.y)-1,1,2)}
   for(const p of parts){cx.globalAlpha=1-p.t/.6;cx.fillStyle=p.c;cx.fillRect(p.x|0,p.y|0,1.5,1.5)}cx.globalAlpha=1;
   const frac=beat-Math.floor(beat);
+  if(state==='play'){drawLaser();drawCr()}
   if(state==='play'&&dead<=0){
     if(guides){cx.strokeStyle=jam>0?'#ff5a4e':'#3fe0d0';cx.globalAlpha=.15+.6*frac;cx.lineWidth=1;
     cx.beginPath();cx.arc(px,py,6+18*(1-frac),0,6.283);cx.stroke();cx.globalAlpha=1}else if(jam>0){cx.strokeStyle='#ff5a4e';cx.globalAlpha=.6;cx.lineWidth=1;cx.beginPath();cx.arc(px,py,8,0,6.283);cx.stroke();cx.globalAlpha=1}
@@ -879,7 +939,9 @@ function draw(){
       cx.globalAlpha=1-d*.7;cx.fillStyle='#3fe0d0';cx.fillRect(Math.round(120-o)-1,gy-3,2,7);cx.fillRect(Math.round(120+o)-1,gy-3,2,7)}}
     else for(let k=0;k<4;k++){const d=Math.ceil(beat)+k-beat;if(d>3)continue;const o=d/3*64;
       cx.globalAlpha=1-d/3*.7;cx.fillStyle='#3fe0d0';cx.fillRect(Math.round(120-o)-1,gy-3,2,7);cx.fillRect(Math.round(120+o)-1,gy-3,2,7)}
-    if(song.sub===2||syncAlive())for(let k=0;k<4;k++){const d=Math.ceil(beat-.5)+.5+k-beat;if(d>3)continue;const o=d/3*64;
+    if(state==='play'&&guides)for(let k=0;k<5;k++){const bt=Math.ceil(beat)+k,L=holdLen(bt);if(!L)continue;const d=chartOn?(timeOfBeat(bt)-ac.currentTime)/1.7*3:bt-beat,d2=chartOn?(timeOfBeat(bt+L)-ac.currentTime)/1.7*3:bt+L-beat;if(d>3)continue;
+      const o1=Math.max(0,d)/3*64,o2=Math.min(3,d2)/3*64;cx.globalAlpha=.85;cx.fillStyle='#ffd23f';cx.fillRect(Math.round(120+o1),gy-2,Math.max(1,Math.round(o2-o1)),5);cx.fillRect(Math.round(120-o2),gy-2,Math.max(1,Math.round(o2-o1)),5);cx.globalAlpha=1}
+    if(song.sub===2||syncAlive()||crActive())for(let k=0;k<4;k++){const d=Math.ceil(beat-.5)+.5+k-beat;if(d>3)continue;const o=d/3*64;
       cx.globalAlpha=.8-d/3*.6;cx.fillStyle='#3fe0d0';cx.fillRect(Math.round(120-o)-.5,gy-1,1,3);cx.fillRect(Math.round(120+o)-.5,gy-1,1,3)}
     cx.globalAlpha=1;cx.fillStyle=`rgba(255,210,63,${.25+.75*pulse})`;cx.fillRect(117,gy-4,6,9)}
   if(state==='play'&&song.file){const f=Math.min(1,(ac.currentTime-songT0)/song.len);cx.fillStyle='#ffffff14';cx.fillRect(0,0,W,2);cx.fillStyle=song.c2;cx.fillRect(0,0,W*f,2)}
@@ -914,6 +976,7 @@ function draw(){
     if(frac<.6)txt('PRESS FIRE',120,276,9,'#3fe0d0');
     txt(playing?'< >  CHANGE TRACK':'< >  PREVIEW TRACKS',120,292,6,'#b9b0e6')}
   if(state==='title'&&titleFade){const u=(performance.now()-titleFade)/600;if(u>=1)titleFade=0;else{cx.globalAlpha=1-u;cx.fillStyle='#05031a';cx.fillRect(0,0,W,H);cx.globalAlpha=1}}
+  if(state==='play'&&fever){const h=(performance.now()/6)%360;cx.globalAlpha=.55+.3*pulse;cx.strokeStyle=`hsl(${h},100%,65%)`;cx.lineWidth=3;cx.strokeRect(1.5,1.5,W-3,H-3);cx.globalAlpha=1;txt('FEVER ×2',120,28,6,`hsl(${(h+120)%360},100%,70%)`)}
   if(state==='insert')drawInsert(fr);
   if(state==='chart')drawChartRec();
   if(state==='edit')drawEditor();
@@ -951,6 +1014,7 @@ function pollPad(){const g=getPad();if(!g){padDir=0;return}
   const flick=ax>.6?1:ax<-.6?-1:0;
   if(state!=='play'||paused){if(down(PB.left))padNav(-1);if(down(PB.right))padNav(1);if(flick&&flick!==padStick)padNav(flick)}
   padStick=flick;
+  padHeld=b(PB.cross)||b(PB.square)||b(PB.r1)||b(PB.r2);
   if(down(PB.cross)||down(PB.square)||down(PB.r1)||down(PB.r2))fire();
   if(down(PB.options))togglePause();
   if(down(PB.circle)&&paused)togglePause();
@@ -967,8 +1031,8 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==
   if(k==='escape'){togglePause();return}
   if(k==='arrowleft'||k==='a'){e.preventDefault();if(menu){if(!e.repeat)pick(sel-1,true)}else held.l=1}
   else if(k==='arrowright'||k==='d'){e.preventDefault();if(menu){if(!e.repeat)pick(sel+1,true)}else held.r=1}
-  else if(k===' '||k==='j'){e.preventDefault();if(!e.repeat)fire()}else if(k==='p')togglePause()});
-addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(k==='arrowleft'||k==='a')held.l=0;if(k==='arrowright'||k==='d')held.r=0});
+  else if(k===' '||k==='j'){e.preventDefault();keyHeld=true;if(!e.repeat)fire()}else if(k==='p')togglePause()});
+addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(k===' '||k==='j')keyHeld=false;if(k==='arrowleft'||k==='a')held.l=0;if(k==='arrowright'||k==='d')held.r=0});
 function hold(id,key){const b=document.getElementById(id);
   b.addEventListener('pointerdown',e=>{e.preventDefault();
     if(state==='edit'){edStep(key==='l'?-1:1,false);return}
@@ -978,11 +1042,13 @@ function hold(id,key){const b=document.getElementById(id);
   ['pointerup','pointercancel','lostpointercapture'].forEach(t=>b.addEventListener(t,()=>{held[key]=0;b.classList.remove('on')}))}
 hold('bl','l');hold('br','r');
 const bf=document.getElementById('bf');
-bf.addEventListener('pointerdown',e=>{e.preventDefault();bf.classList.add('on');fire()});
-['pointerup','pointercancel','pointerleave'].forEach(t=>bf.addEventListener(t,()=>bf.classList.remove('on')));
+bf.addEventListener('pointerdown',e=>{e.preventDefault();bf.classList.add('on');ptrHeld=true;fire()});
+['pointerup','pointercancel','pointerleave'].forEach(t=>bf.addEventListener(t,()=>{bf.classList.remove('on');ptrHeld=false}));
+['pointerup','pointercancel'].forEach(t=>addEventListener(t,()=>{ptrHeld=false}));
 bf.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();fire()}});
 cv.addEventListener('pointerdown',e=>{e.preventDefault();
   if(state==='edit'){edPointerDown(e);return}
+  if(state==='play'&&!paused)ptrHeld=true;
   if(paused){const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H;
     if(y>=pauseBtnY()-6&&y<=pauseBtnY()+28&&x>=34&&x<=206){pauseSel=x<120?0:1}else return}
   fire()});
