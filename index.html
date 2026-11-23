@@ -268,7 +268,7 @@ const mult=()=>1+Math.min(7,Math.floor(combo/8));
 const pop=(s,x,y,c)=>pops.push({s,x,y,c,t:0});
 function burst(x,y,c,n){for(let i=0;i<n;i++){const a=Math.random()*6.28,v=20+Math.random()*70;parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,c,t:0})}}
 
-function spawnWave(b){en=[];stageB=b;cap=null;
+function spawnWave(b){en=[];stageB=b;cap=null;stageDeaths=deaths;
   const add=(type,row,cols)=>cols.forEach(c=>en.push({type,row,col:c,hp:type==='boss'?2:1,st:'in',x:120,y:-20}));
   if(level%3===0){const hp=30+10*(level/3-1);add('fly',3,[2,3,4,5,6,7]);
     boss={kind:SKULLS[(level/3-1)%4],x:120,y:-40,hp,max:hp,tx:120,warnAt:-99,beamFrom:-99,beamTo:-99,stunTo:-99,flash:0};sfx(t=>{tone(t,57,'sawtooth',.1,.5,1200);tone(t+.5,57,'sawtooth',.1,.5,1200)});return}
@@ -282,7 +282,7 @@ function fpos(e){const sw=Math.sin(beat*Math.PI/4)*14,spread=1+.06*pulse;
 function setState(v){if(v==='title'&&chartTesting){chartTesting=false;applyCharts()}state=v;document.body.classList.toggle('charting',v==='edit'||v==='chart');document.querySelectorAll('#tracks button').forEach(b=>b.disabled=v==='play'||v==='insert'||v==='chart'||v==='edit'||v==='clear'||v==='outro');if(typeof renderChartUI==='function')renderChartUI()}
 function start(){if(!ac)initAudio();if(ac.state==='suspended')ac.resume();
   score=0;lives=3;combo=0;best=0;level=1;px=120;inv=0;dead=0;jam=0;shots=[];eb=[];parts=[];pops=[];en=[];
-  boss=null;cap=null;py=296;stats={p:0,g:0,m:0};runBlind=!guides;deaths=0;startMusic(false);firedBeat=-99;won=false;clearB=-1;paused=false;setState('play');spawnWave(0)}
+  boss=null;cap=null;py=296;stats={p:0,g:0,m:0};runBlind=!guides;deaths=0;stageDeaths=0;noHit=0;startMusic(false);firedBeat=-99;won=false;clearB=-1;paused=false;setState('play');spawnWave(0)}
 function pick(i,preview){onLoaded=null;if(i!==sel){slideDir=i>sel?1:-1;slideT=performance.now()}sel=(i+SONGS.length)%SONGS.length;song=SONGS[sel];loadFile(song);st('sb_song',song.id);level=1;
   const c=document.querySelector('.cab');c.style.setProperty('--c1',song.c1);c.style.setProperty('--c2',song.c2);
   mq.querySelector('small').textContent=song.name.toUpperCase();renderTracks();if(typeof renderChartUI==='function'){take=take&&take.id===song.id?take:null;chartMsg='';renderChartUI()}
@@ -405,7 +405,8 @@ function update(dt){
   eb=eb.filter(b=>b.y<H+6);
   if(song.file&&ac.currentTime>songT0+song.len&&lives>0){beginClear();return}
   if(state==='play'&&!en.length&&!boss&&clearB<0){level++;if(!song.file)pendBpm=Math.min(bpm+8,song.bpm+64);clearB=(Math.floor(beat/4)+2)*4;const sb=award(1000*(level-1));
-    pop('+'+sb,120,190,'#ffd23f')}
+    pop('+'+sb,120,190,'#ffd23f');
+    if(deaths===stageDeaths){noHit++;const nb=award(2500*(level-1));pop('NO-HIT +'+nb,120,206,'#3fe0d0');sfx(t=>{tone(t+.1,84,'square',.05,.08,5000);tone(t+.2,91,'square',.05,.12,5000)})}}
 }
 
 /* ---------- drawing ---------- */
@@ -622,7 +623,7 @@ function drawChartRec(){if(!rec)return;const now=ac.currentTime-rec.zero,HY=205,
   if(now<rec.from){const n=Math.ceil(rec.from-now);txt(n>0?String(Math.min(3,Math.ceil((rec.start-ac.currentTime)/.4))):'',120,140,18,'#ffd23f')}
   txt('SPACE TAP   ESC STOP',120,312,6,'#b9b0e6')}
 /* ---------- song clear finale + way back to the menu ---------- */
-let runBlind=false,deaths=0;const BL=()=>runBlind?1.5:1,hiKey=()=>song.id+(runBlind?'_blind':''),menuKey=x=>x.id+(guides?'':'_blind');
+let runBlind=false,deaths=0,stageDeaths=0,noHit=0;const BL=()=>runBlind?1.5:1,hiKey=()=>song.id+(runBlind?'_blind':''),menuKey=x=>x.id+(guides?'':'_blind');
 function award(p){const v=Math.round(p*BL());score+=v;return v}
 let stats={p:0,g:0,m:0},warp=1,clr=null,outT=0,titleFade=0;
 function beginClear(){const bonus=Math.round(lives*5000*BL()),flaw=deaths===0?Math.round(25000*BL()):0,total=score+bonus+flaw,hit=stats.p+stats.g+stats.m,acc=hit?(stats.p+stats.g*.5)/hit:0;
@@ -756,7 +757,7 @@ function draw(){
   if(state==='outro')drawOutro(fr);
   if(state==='over'){cx.fillStyle='#05031acc';cx.fillRect(0,0,W,H);txt(won?'SONG CLEAR':'GAME OVER',120,120,14,won?song.c2:'#ff5a4e');
     txt('SCORE '+score,120,150,8,'#f4f1ff');txt('BEST COMBO '+best,120,166,7,'#ffd23f');txt(won?'LIVES BONUS '+lives*5000:song.file?'REACHED STAGE '+level:'REACHED '+bpm+' BPM',120,182,7,'#3fe0d0');
-    if(newHi)txt('NEW HIGH SCORE',120,204,7,'#ffd23f');txt(song.name.toUpperCase(),120,98,6,song.c2);
+    if(noHit)txt('NO-HIT STAGES '+noHit,120,198,7,'#3fe0d0');if(newHi)txt('NEW HIGH SCORE',120,214,7,'#ffd23f');txt(song.name.toUpperCase(),120,98,6,song.c2);
     if(frac<.6)txt('FIRE: RETRY',120,236,8,'#3fe0d0');txt('< >  CHANGE TRACK',120,256,6,'#b9b0e6')}
 }
 

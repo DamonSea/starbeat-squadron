@@ -64,7 +64,7 @@ If your shots keep grading late (common with Bluetooth headphones), raise the ti
 
 For a harder run, switch **Beat guides** off in the settings. The ring around your ship and the markers in the bottom gauge disappear, so you play entirely by ear. Blind runs score **×1.5** and keep their own **blind best** for each track. Switching the guides back on mid-run cancels the bonus.
 
-Clear a recorded track without losing a ship to earn a **FLAWLESS +25,000** bonus, which the blind multiplier also boosts.
+Clear any stage without losing a ship to earn a **NO-HIT** bonus of 2,500 × the stage number, on every track. Clear a whole recorded track without losing a ship to earn a **FLAWLESS +25,000** bonus. The blind multiplier boosts both.
 
 ## Running it locally
 
