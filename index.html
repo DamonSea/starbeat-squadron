@@ -101,7 +101,7 @@ h2{font-size:20px;line-height:1.2;margin:0 0 10px}
     <p>A Galaga-style shooter where your cannon only fires on the beat. Built-in tracks speed up with every wave you clear; on recorded tracks, survive to the end of the song.</p>
     <h2>Track select</h2>
     <div class="tracks" id="tracks"></div>
-    <div class="keys"><kbd>← →</kbd><span>or A / D to fly</span><kbd>SPACE</kbd><span>or J to fire, on the beat</span><kbd>P</kbd><span>or Esc to pause, then resume or go back to the menu</span><kbd>PS5</kbd><span>stick or d-pad to fly, ✕ / □ / R1 / R2 to fire, Options to pause, ○ to resume</span></div>
+    <div class="keys"><kbd>← →</kbd><span>or A / D to fly</span><kbd>SPACE</kbd><span>or J to fire, on the beat</span><kbd>P</kbd><span>or Esc to pause, then resume or go back to the menu</span><kbd id="padKbd">PS5</kbd><span id="padHelp">stick or d-pad to fly, ✕ / □ / R1 / R2 to fire, Options to pause, ○ to resume</span></div>
     <div class="grades">
       <div><b style="color:var(--sun)">PERFECT</b><span>Within 55 ms: twin piercing shots, plus a spread at ×4</span></div>
       <div><b style="color:var(--teal)">GREAT</b><span>Within 110 ms: one standard shot</span></div>
@@ -122,6 +122,7 @@ h2{font-size:20px;line-height:1.2;margin:0 0 10px}
     </div>
   </div>
 </div>
+<script src="pads.js"></script>
 <script>
 {
 const cv=document.getElementById('cv'),cx=cv.getContext('2d'),W=240,H=320,mq=document.getElementById('mq');
@@ -774,10 +775,16 @@ let pauseSel=0;
 let padDir=0,padPrev=[],padStick=0,padIdx=-1;
 const PB={cross:0,circle:1,square:2,triangle:3,l1:4,r1:5,l2:6,r2:7,options:9,up:12,down:13,left:14,right:15};
 function getPad(){let g=null;try{const ps=navigator.getGamepads?navigator.getGamepads():[];for(const x of ps)if(x&&x.connected){g=x;break}}catch(e){}return g}
+// name of the controller's bottom face button: ✕ on PlayStation, B on a Switch 2 Pro (via pads.js), A on Xbox
+function fireName(){const g=getPad();return window.Pads&&g?Pads.names(g)[0]:'✕'}
 function rumble(strong,weak,ms){const g=getPad();try{if(g&&g.vibrationActuator)g.vibrationActuator.playEffect('dual-rumble',{duration:ms,strongMagnitude:strong,weakMagnitude:weak})}catch(e){}}
 function padNav(d){if(paused){pauseSel^=1;return}
   if(state==='title'||(state==='over'&&performance.now()-overAt>900))pick(sel+d,true)}
-function pollPad(){const g=getPad();if(!g){padDir=0;return}
+// the controller help row follows the controller in use (PS5 wording, or the Switch 2 Pro's names via pads.js)
+let padHelpL='';function padHelpFor(g){const L=window.Pads&&g?Pads.layout(g):'playstation';if(L===padHelpL)return;padHelpL=L;
+  const n=L==='nintendo';document.getElementById('padKbd').textContent=n?'PRO':'PS5';
+  document.getElementById('padHelp').textContent=n?'stick or d-pad to fly, B / Y / R / ZR to fire, + to pause, A to resume':'stick or d-pad to fly, ✕ / □ / R1 / R2 to fire, Options to pause, ○ to resume'}
+function pollPad(){const g=getPad();if(!g){padDir=0;return}padHelpFor(g);
   if(g.index!==padIdx){padIdx=g.index;padPrev=[];pop('CONTROLLER READY',120,40,'#3fe0d0')}
   const b=i=>!!(g.buttons[i]&&(g.buttons[i].pressed||g.buttons[i].value>.5)),
         down=i=>b(i)&&!padPrev[i];
@@ -855,7 +862,7 @@ function renderChartUI(){const el=document.getElementById('chartui');if(!el)retu
     <div class="cm-row"><button data-ed="q">Snap: ${ed.q?'1/'+ed.q:'off'}</button><button data-ed="rate">Speed: ${ed.rate}×</button><button data-ed="clicks">Note clicks: ${ed.clicks?'on':'off'}</button><button data-ed="zin">Zoom +</button><button data-ed="zout">Zoom −</button></div>
     <div class="cm-row"><button data-ed="done" class="cm-rec">✓ Done editing</button></div>
     <p><b>Keys:</b> Space play/pause · ↑/→ forward, ↓/← back (Shift = a beat) · PgUp/PgDn a bar · Home/End · N add at playhead · Delete remove the highlighted note · [ ] nudge it 10 ms (Shift = 1 ms) · ⌘Z / Ctrl+Z undo · S snap · R speed · C clicks · +/− zoom · Esc done.<br><b>Mouse:</b> click empty lane to add, click a note to delete, drag or scroll to move through the song, click the strip on the right to jump.</p>`;return}
-  if(state==='chart'){el.innerHTML=`<p>Recording <b>${x.name}</b>. Tap Space, J, FIRE or ✕ on every note you want. Press Esc, P or Stop to finish.</p><div class="cm-row"><button id="cm-stop" class="cm-rec">■ Stop</button></div>`;return}
+  if(state==='chart'){el.innerHTML=`<p>Recording <b>${x.name}</b>. Tap Space, J, FIRE or ${fireName()} on every note you want. Press Esc, P or Stop to finish.</p><div class="cm-row"><button id="cm-stop" class="cm-rec">■ Stop</button></div>`;return}
   const kind=x.custom?`your chart, ${x.chart.length} notes`:x.defChart?`default chart, ${x.defChart.length} notes`:'steady beat, no chart yet';
   recFrom=Math.min(recFrom,Math.floor(x.len-5));
   let h=`<p><b>${x.name}</b>: ${kind}.</p>

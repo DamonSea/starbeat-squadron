@@ -47,7 +47,7 @@ For precise work, open the **chart editor**. It shows a scrolling timeline with 
 
 ### And also
 - **9 tracks.** Four are generated live by the game: Neon Drive (synthwave), Mothership Strut (funk), Pixel Overture (chiptune) and Liquid Velocity (drum & bass). The other five are recordings: Moon Colony, Red Sky, Primate Pulse, Swarm Song and Final Transmission. On those, the tempo stays fixed and you win by surviving to the end of the song. Red Sky follows a note chart instead of a fixed beat: 527 notes placed on the song's actual accented hits, Guitar Hero style.
-- **PS5 and standard controller support**, with rumble.
+- **PS5, Switch 2 Pro and standard controller support**, with rumble. The Switch 2 Pro Controller works wired in Chrome or Edge on a computer: the first time, click the small "Switch 2 Pro Controller found" button in the corner and pick the controller to wake it up; after that it wakes by itself.
 - **A separate high score for each track**, plus your settings, saved in your browser.
 
 ## Controls
@@ -55,8 +55,8 @@ For precise work, open the **chart editor**. It shows a scrolling timeline with 
 | | Keyboard | Controller |
 |---|---|---|
 | Fly | ← → or A / D | Left stick or d-pad |
-| Fire (on the beat) | Space or J | ✕, □, R1 or R2 |
-| Pause | P or Esc | Options (○ to resume) |
+| Fire (on the beat) | Space or J | ✕, □, R1 or R2 (Switch 2 Pro: B, Y, R or ZR) |
+| Pause | P or Esc | Options (○ to resume); Switch 2 Pro: + (A to resume) |
 | Change track (menu) | ← → | Stick or d-pad |
 | Cycle screen filter | F | |
 
