@@ -125,6 +125,9 @@ h2{font-size:20px;line-height:1.2;margin:0 0 10px}
       <b>Modifiers</b> <span style="color:var(--dim);font-size:14px">(stack them for a bigger score; each combination keeps its own best)</span>
       <div class="filters" id="mods"></div>
       <p id="modsum" style="margin:2px 0 14px;font-size:14px"></p>
+      <b>Dev tools</b>
+      <div class="filters"><button id="devb" aria-pressed="false">Unlock all B-sides: off</button></div>
+      <p style="margin:2px 0 14px;font-size:14px;color:var(--dim)">Opens every side B for testing. Your real ranks are still tracked, so turning this off puts the locks back.</p>
       <b>Screen filter</b> <span style="color:var(--dim);font-size:14px">(F to cycle)</span>
       <div class="filters" id="filters"></div>
       <label for="ps" style="margin-bottom:6px">Practice: start at stage</label>
@@ -253,7 +256,8 @@ let side=st('sb_side')==='B'?'B':'A',flipT=0,flipFrom=side,lockT=0;
 let RANKS={};try{RANKS=JSON.parse(st('sb_ranks')||'{}')||{}}catch(e){RANKS={}}
 const RV={C:1,B:2,A:3,S:4};
 const sideId=(x,sd)=>x.id+((sd||side)==='B'?'_B':'');
-const bOpen=x=>RV[RANKS[x.id]]>=3;
+let devB=st('sb_devb')==='1';
+const bOpen=x=>devB||RV[RANKS[x.id]]>=3;
 function noteRank(id,r){if((RV[r]||0)>(RV[RANKS[id]]||0)){RANKS[id]=r;st('sb_ranks',JSON.stringify(RANKS))}}
 const BV=()=>side==='B'?song.b:null;
 let runB=null,rate=1,trans=0,mTr=0,bmode='',tfBase=1,chop=null;
@@ -574,7 +578,7 @@ function updBoss(dt){const B=boss,k=Math.min(1,Math.max(0,(beat-stageB)/4)),phas
     burst(s.x,s.y-2,'#f4f1ff',3);sfx(t=>tone(t,52,'square',.06,.04));if(B.hp<=0){killBoss();return}}}}
 function killBoss(){rumble(1,1,500);const B=boss,m=mult(),pts=award(5000*m);
   if(!song.file&&level===6&&!practice){const h=stats.p+stats.g+stats.m,acc=h?(stats.p+stats.g*.5)/h:0,rk=acc>=.92?'S':acc>=.8?'A':acc>=.65?'B':'C',was=bOpen(song);noteRank(sideId(song),rk);
-    if(side==='A'&&!was&&bOpen(song)){pop('SIDE B UNLOCKED!',120,146,'#b98cff');renderTracks();sfx(t=>[67,71,74,79].forEach((n,i)=>tone(t+.5+i*.09,n,'square',.05,.15,4000)))}}
+    if(side==='A'&&!was&&RV[RANKS[song.id]]>=3){pop('SIDE B UNLOCKED!',120,146,'#b98cff');renderTracks();sfx(t=>[67,71,74,79].forEach((n,i)=>tone(t+.5+i*.09,n,'square',.05,.15,4000)))}}
   for(let i=0;i<6;i++)burst(B.x+(Math.random()-.5)*44,B.y+(Math.random()-.5)*18,[song.c1,song.c2,'#f4f1ff'][i%3],26);
   pop('BOSS DOWN +'+pts,120,130,'#ffd23f');sfx(t=>{noise(t,200,.6,.9);tone(t,40,'sawtooth',.2,.8,600)});
   en.forEach(e=>{award(PTS[e.type]*m);burst(e.x,e.y,COL[e.type],12)});en=[];eb=[];cap=null;boss=null}
@@ -924,7 +928,7 @@ function award(p){const v=Math.round(p*BL()*(fever?2:1));score+=v;return v}
 let stats={p:0,g:0,m:0},warp=1,clr=null,outT=0,titleFade=0;
 function beginClear(){const bonus=Math.round(lives*5000*BL()),flaw=deaths===0?Math.round(25000*BL()):0,total=score+bonus+flaw,hit=stats.p+stats.g+stats.m,acc=hit?(stats.p+stats.g*.5)/hit:0;
   clr={t0:performance.now(),base:score,bonus,total,acc,rank:acc>=.92?'S':acc>=.8?'A':acc>=.65?'B':'C',newHi:total>hiOf(hiKey()),flaw,blind:runBlind,sx:px,shown:0,slam:false,fw:0,ticks:0};
-  if(!practice){const was=bOpen(song);noteRank(sideId(song),clr.rank);clr.unlocked=side==='A'&&!was&&bOpen(song)}
+  if(!practice){const was=bOpen(song);noteRank(sideId(song),clr.rank);clr.unlocked=side==='A'&&!was&&RV[RANKS[song.id]]>=3}
   won=true;score=total;if(clr.newHi){HI[hiKey()]=total;st('sb_his',JSON.stringify(HI))}
   eb=[];shots=[];cap=null;playing=false;stopFile(true);
   en.slice().sort((a,b)=>a.x-b.x).forEach((e,i)=>e.boomAt=.15+i*.06);if(boss)boss.boomAt=.1;
@@ -1051,6 +1055,7 @@ function draw(){
     for(let i=0;i<SONGS.length;i++){cx.fillStyle=i===sel?song.c2:'#ffffff33';cx.fillRect(Math.round(120-SONGS.length*5+2.5+i*10),216,5,5)}
     ['bee','fly','boss'].forEach((k,i)=>{cx.drawImage(SP[k][fr],70+i*45,232);txt(PTS[k]+'',75+i*45,252,6,'#b9b0e6')});
     if(frac<.6)txt('PRESS FIRE',120,276,9,'#3fe0d0');
+    if(devB)txt('DEV: B-SIDES OPEN',120,304,5,'#ff9f3f');
     txt((playing?'< > TRACK':'< > PREVIEW')+'   ^ v FLIP TO '+(side==='A'?'B':'A'),120,292,6,'#b9b0e6')}
   if(state==='title'&&titleFade){const u=(performance.now()-titleFade)/600;if(u>=1)titleFade=0;else{cx.globalAlpha=1-u;cx.fillStyle='#05031a';cx.fillRect(0,0,W,H);cx.globalAlpha=1}}
   if(state==='play'&&runB){if(runB.mode==='cs'){cx.globalAlpha=.1+.05*pulse;cx.fillStyle='#7a3cff';cx.fillRect(0,0,W,H);cx.globalAlpha=1}
@@ -1149,6 +1154,9 @@ function renderMods(){const el=document.getElementById('mods');if(!el)return;
   const list=menuMods(),m=multOf(list);document.getElementById('modsum').innerHTML=list.length?`Score ${multStr(m)} with ${list.map(k=>MODS[k].name).join(' + ')}.${state==='play'?' Changes apply from your next run.':''}`:'No modifiers on. Hover or long-press a sticker to see what it does.'}
 document.getElementById('mods').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const k=b.dataset.mod;
   selMods=selMods.includes(k)?selMods.filter(x=>x!==k):selMods.concat(k);st('sb_mods',JSON.stringify(selMods));renderMods();renderTracks()});
+const devb=document.getElementById('devb');
+const setDevB=v=>{devB=v;st('sb_devb',v?'1':'0');devb.textContent='Unlock all B-sides: '+(v?'on':'off');devb.setAttribute('aria-pressed',v);if(document.getElementById('tracks').children.length)renderTracks()};
+setDevB(devB);devb.addEventListener('click',()=>setDevB(!devB));
 const gdb=document.getElementById('gd');
 const setGd=v=>{guides=v;setTimeout(()=>{try{renderMods()}catch(e){}},0);if(v&&state==='play'){runBlind=false;runMods=runMods.filter(k=>k!=='blind')}if(typeof renderTracks==='function'&&document.getElementById('tracks').children.length)renderTracks();st('sb_guides',v?'1':'0');gdb.textContent='Beat guides: '+(v?'on':'off (blind ×1.5)');gdb.setAttribute('aria-pressed',v)};
 setGd(guides);gdb.addEventListener('click',()=>setGd(!guides));
