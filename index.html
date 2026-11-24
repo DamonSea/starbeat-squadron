@@ -39,6 +39,8 @@ h2{font-size:20px;line-height:1.2;margin:0 0 10px}
 .card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:center;border:2px solid var(--a);border-radius:16px;padding:10px 16px;background:#ffffff10;min-height:72px}
 .card b{font-weight:600;font-size:18px}
 .card span{grid-column:1;font-size:14px;color:var(--dim)}
+.card .flip{grid-column:1/3;justify-self:start;margin-top:6px;font:inherit;font-size:14px;padding:4px 12px;border-radius:999px;border:1px solid var(--a);background:none;color:var(--ink);cursor:pointer}
+.card .flip:disabled{opacity:.4;cursor:default}
 .card em{grid-row:1/3;grid-column:2;font-style:normal;font-size:14px;color:var(--dim);text-align:right;white-space:nowrap}
 .set{background:#ffffff0d;border-radius:12px;padding:14px 16px}
 .set label{display:flex;justify-content:space-between;gap:10px;font-weight:600}
@@ -103,6 +105,7 @@ h2{font-size:20px;line-height:1.2;margin:0 0 10px}
     <p style="font-size:15px"><b style="color:var(--ink)">New enemies:</b> Metronome (only Perfects crack it) · Static (only solid on the beat) · Echo (hit it twice, one beat apart) · Bass Drop (break it or dodge the slam) · Tape Worm (shoot the tail first) · Syncopator (only off-beat shots hurt it) · Conductor (switches you between double and half time). Use <b style="color:var(--ink)">Practice</b> in the settings to jump to them.</p>
     <p style="font-size:15px"><b style="color:var(--ink)">New mechanics:</b> hold notes (long yellow markers: fire and keep holding for a laser) · Fever (32 Perfects in a row) · tempo shifts on built-in tracks from stage 4 · skull bosses play a rhythm for you to fire back.</p>
     <p style="font-size:15px"><b style="color:var(--ink)">Modifiers:</b> pick stickers in the settings (No Greats, One Life, Fragile Combo, Silent Swarm, Mirror) to stack score multipliers. They show on the cassette.</p>
+    <p style="font-size:15px"><b style="color:var(--ink)">B-sides:</b> flip any tape (↑/↓, B, triangle, or the card button) for a remix: Chopped &amp; Screwed, Double Time, Half Time or a Hard Chart. Side B opens once you get an A rank on side A. On built-in tracks, that means beating the second skull boss with 80% accuracy.</p>
     <h1>Pick a track, then shoot on the beat</h1>
     <p>A Galaga-style shooter where your cannon only fires on the beat. Built-in tracks speed up with every wave you clear; on recorded tracks, survive to the end of the song.</p>
     <h2>Track select</h2>
@@ -179,7 +182,7 @@ function initAudio(){ac=new(window.AudioContext||window.webkitAudioContext)();ma
   for(let i=0;i<1024;i++){const x=i/512-1;cv2[i]=(1+k)*x/(1+k*Math.abs(x))}ws.curve=cv2;
   const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2600;const out=ac.createGain();out.gain.value=.2;
   gtrIn.connect(ws);ws.connect(lp);lp.connect(out);out.connect(master)}
-const mf=m=>440*2**((m-69)/12);
+const mf=m=>440*2**((m+mTr-69)/12);
 function env(n,t,a,pk,dec){const g=ac.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(pk,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+a+dec);n.connect(g);g.connect(master)}
 function kick(t,pk=.9){const o=ac.createOscillator();o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(42,t+.12);env(o,t,.002,pk,.22);o.start(t);o.stop(t+.3)}
 function noise(t,hp,pk,dec){const s=ac.createBufferSource();s.buffer=noiseBuf;const f=ac.createBiquadFilter();f.type='highpass';f.frequency.value=hp;s.connect(f);env(f,t,.001,pk,dec);s.start(t);s.stop(t+dec+.05)}
@@ -194,7 +197,7 @@ function reese(t,m,dur){const f=ac.createBiquadFilter();f.type='lowpass';f.frequ
 const chordOf=(r,q)=>q==='m'?[r,r+3,r+7,r+10]:q==='7'?[r,r+4,r+7,r+10]:q==='M'?[r,r+4,r+7,r+12]:[r,r+3,r+7,r+12];
 
 const SONGS=[
- {id:'neon',name:'Neon Drive',style:'Synthwave',bpm:104,c1:'#ff5a4e',c2:'#ffd23f',
+ {id:'neon',b:{mode:'cs',name:'Slowed + Chopped',rate:.8,tr:-3},name:'Neon Drive',style:'Synthwave',bpm:104,c1:'#ff5a4e',c2:'#ffd23f',
   play(s,t,sp,lv){const i=s%16,[r,q]=[[45,'n'],[41,'M'],[48,'M'],[43,'M']][Math.floor(s/16)%4],ch=chordOf(r,q);
    if(i%4===0)kick(t);if(i===4||i===12)snare(t);
    if(i%2===0)noise(t,7000,.12,.035);else if(lv>=2)noise(t,8500,.05,.02);
@@ -202,16 +205,16 @@ const SONGS=[
    tone(t,ch[[0,1,2,1,0,2,1,2][i%8]]+24,'square',.04,sp*.9,2600);
    if(i===0)tone(t,ch[2]+12,'triangle',.07,sp*14);
    if(lv>=3&&i%4===3)tone(t,ch[1]+36,'square',.025,sp*.6,4000)}},
- {id:'funk',name:'Mothership Strut',style:'Funk',bpm:112,c1:'#ff9f1c',c2:'#ff6fb5',
+ {id:'funk',b:{mode:'dt',name:'Double Time'},name:'Mothership Strut',style:'Funk',bpm:112,c1:'#ff9f1c',c2:'#ff6fb5',
   play(s,t,sp,lv){const i=s%16,[r,q]=[[40,'m'],[45,'7'],[40,'m'],[47,'7']][Math.floor(s/16)%4],ch=chordOf(r,q);
-   if(i%4===0)kick(t);if(i===4||i===12)snare(t,.5);
+   if(i%4===0)kick(t);if(i===4||i===12)snare(t,.5);if(bmode==='dt'&&(i===2||i===10||i===14))snare(t,.3);
    if(i%4===2)noise(t,6000,.13,.13);else if(i%2===1)noise(t,9000,.05,.02);
    const BL={0:0,3:12,6:10,8:0,10:12,11:7,14:10};
    if(i in BL)tone(t,r-12+BL[i],'sawtooth',BL[i]===12?.3:.24,sp*(i===0?2.4:1.1),BL[i]===12?1600:850);
    if([3,6,11,14].includes(i))ch.forEach(m=>tone(t,m+24,'square',.022,.07,1900));
    if(lv>=2&&i===0)[ch[1],ch[3]].forEach(m=>tone(t,m+24,'triangle',.05,sp*14));
    if(lv>=3&&i%8===6)tone(t,81,'square',.03,.05,3000)}},
- {id:'chip',name:'Pixel Overture',style:'Chiptune',bpm:124,c1:'#3fe0d0',c2:'#9dff6b',
+ {id:'chip',b:{mode:'hard',name:'Hard Chart',sub:2},name:'Pixel Overture',style:'Chiptune',bpm:124,c1:'#3fe0d0',c2:'#9dff6b',
   play(s,t,sp,lv){const i=s%16,b=Math.floor(s/16)%4,
    M=[[72,76,79,76,84,79,76,79],[69,72,76,72,81,76,72,76],[65,69,72,69,77,72,69,72],[67,71,74,79,83,79,74,71]],R=[48,45,41,43];
    if(i%2===0){tone(t,M[b][i/2],'square',.05,sp*1.7);tone(t,R[b]-12+(i%4===2?12:0),'triangle',.3,sp*1.8)}
@@ -219,52 +222,80 @@ const SONGS=[
    if(i%4===2)noise(t,10000,.06,.02);
    if(lv>=2&&i%2===1)tone(t,M[b][(i-1)/2]+12,'square',.018,sp*.7);
    if(lv>=3&&i===0)tone(t,M[b][4]+12,'triangle',.06,sp*12)}},
- {id:'dnb',name:'Liquid Velocity',style:'Drum & bass',bpm:160,c1:'#4fc1ff',c2:'#b77bff',
+ {id:'dnb',b:{mode:'ht',name:'Half Time',sub:2},name:'Liquid Velocity',style:'Drum & bass',bpm:160,c1:'#4fc1ff',c2:'#b77bff',
   play(s,t,sp,lv){const i=s%16,[r,q]=[[41,'n'],[37,'M'],[44,'M'],[39,'M']][Math.floor(s/16)%4],ch=chordOf(r,q);
-   if(i===0||i===10)kick(t);if(i===4||i===12)snare(t,.55);if(i===7||i===15)noise(t,2000,.1,.05);
+   if(i===0||i===10)kick(t);if(bmode==='ht'?i===8:(i===4||i===12))snare(t,bmode==='ht'?.75:.55);if(i===7||i===15)noise(t,2000,.1,.05);
    if(i%2===0)noise(t,9000,.07,.025);else if(lv>=2)noise(t,11000,.035,.015);
    if(i===0)reese(t,r-12,sp*7.5);if(i===8)reese(t,r-12+(i===8&&Math.floor(s/16)%2?3:0),sp*7.5);
    if(i===0)ch.slice(0,3).forEach(m=>tone(t,m+24,'triangle',.035,sp*15));
    if(lv>=2&&(i===6||i===14))tone(t,ch[2]+24,'square',.025,sp*.8,2200);
    if(lv>=3&&i%4===3)tone(t,ch[(i>>2)%3]+36,'sine',.03,sp*.6)}}
 ,
- {id:'moon',name:'Moon Colony',style:'Your upload',bpm:78.26,file:'moon_colony.mp3',phase:.410,len:255.6,loop:[40.2031,64.7367],sub:2,dif:3,
+ {id:'moon',b:{mode:'cs',name:'Slowed + Chopped',rate:.8},name:'Moon Colony',style:'Your upload',bpm:78.26,file:'moon_colony.mp3',phase:.410,len:255.6,loop:[40.2031,64.7367],sub:2,dif:3,
   note:'78 BPM, half-beats count · 4:15',short:'78 BPM  4:15',c1:'#c9d4ff',c2:'#7fe0ff',play(){}},
- {id:'redsky',name:'Red Sky',style:'Your upload',bpm:89.5522,file:'red_sky.mp3',phase:.697,len:327,loop:[0,326.29],sub:1,dif:3,
+ {id:'redsky',b:{mode:'hard',name:'Hard Chart',sub:2},name:'Red Sky',style:'Your upload',bpm:89.5522,file:'red_sky.mp3',phase:.697,len:327,loop:[0,326.29],sub:1,dif:3,
   chart:[0.697,1.032,2.037,2.707,3.377,3.712,4.382,4.717,5.387,6.057,6.392,7.062,7.397,8.067,8.737,9.072,10.077,10.747,11.752,12.087,13.092,13.427,14.097,14.432,15.772,16.107,17.112,17.447,17.782,18.117,18.452,18.787,19.792,21.132,21.467,22.472,22.807,23.142,23.812,24.147,25.152,25.487,26.157,26.827,27.497,27.832,28.502,28.837,29.507,30.177,30.512,31.517,32.187,32.857,33.192,34.197,34.867,35.537,35.872,36.542,36.877,37.547,37.882,38.552,39.557,39.892,40.227,41.232,42.572,42.907,43.577,43.912,44.582,45.252,45.587,46.592,46.927,47.932,48.267,49.272,49.607,50.612,50.947,51.282,51.952,52.287,52.957,53.627,54.129,54.632,55.135,56.307,56.642,56.977,57.982,58.317,58.987,59.322,59.657,60.997,61.667,62.337,63.342,63.677,64.012,65.017,66.022,66.357,66.692,67.362,67.697,68.702,69.707,70.042,70.377,71.382,71.717,72.722,73.057,73.392,74.397,75.067,75.402,75.737,76.742,77.077,77.412,78.082,78.417,79.757,80.427,81.097,81.432,82.102,82.772,83.442,83.777,84.447,85.117,85.787,86.457,87.127,87.797,88.132,88.467,88.802,89.807,90.477,91.147,91.482,91.817,92.152,92.487,93.157,93.492,94.497,94.832,96.507,96.842,97.177,97.512,98.182,98.852,99.187,99.522,100.192,101.867,102.202,102.537,102.872,103.542,104.212,104.547,104.882,105.552,107.227,108.232,108.567,109.572,109.907,110.242,110.912,112.252,112.587,113.257,113.592,113.927,114.262,114.932,115.267,116.272,117.947,118.617,118.952,119.287,119.957,120.292,120.627,121.632,122.637,123.307,123.642,123.977,124.312,124.982,125.652,125.987,126.322,126.992,128.667,129.002,129.337,129.672,130.342,131.012,131.347,131.682,132.352,134.027,135.2,135.702,136.037,136.707,137.712,139.387,140.057,140.392,141.397,142.067,143.072,143.407,144.412,144.747,145.752,146.087,147.092,147.427,147.762,148.432,149.437,149.772,150.107,150.777,152.117,152.452,152.787,153.122,153.457,153.792,154.462,155.802,156.137,157.142,157.477,157.812,158.147,159.822,160.157,160.492,161.162,161.497,162.502,163.172,163.507,164.177,164.512,165.182,166.187,166.522,166.857,167.192,167.862,168.197,169.202,169.872,170.877,171.547,172.217,173.222,173.557,173.892,174.562,174.897,175.567,176.237,176.907,177.577,177.912,178.582,178.917,179.252,179.922,180.257,180.76,182.267,182.937,183.272,183.607,184.277,184.947,185.282,186.287,186.957,187.627,189.302,189.637,189.972,190.642,190.977,191.982,192.317,192.652,192.987,193.322,193.657,194.327,194.997,195.667,196.002,197.007,197.677,198.347,198.682,199.017,199.352,199.687,200.357,200.692,201.697,202.032,203.707,204.377,204.712,205.717,206.052,207.057,207.392,208.062,208.397,208.732,209.737,210.072,210.742,211.077,211.412,212.752,213.422,213.757,214.092,215.432,215.767,216.437,216.772,217.107,217.777,218.112,219.452,219.787,220.792,221.462,221.797,222.132,222.467,222.802,223.137,223.472,225.147,226.152,226.822,227.157,227.492,227.827,228.162,228.832,230.507,231.177,231.512,231.847,232.517,232.852,233.187,234.192,235.532,235.867,236.202,236.872,237.207,238.212,238.547,239.552,240.557,240.892,241.227,241.897,242.232,242.567,243.572,243.907,244.242,244.912,246.252,246.587,247.257,247.592,248.262,248.597,248.932,249.267,249.937,251.277,251.947,252.617,252.952,253.622,253.957,254.627,255.297,256.302,256.637,257.307,258.312,258.647,259.652,259.987,260.657,260.992,262.667,263.337,263.672,264.007,264.677,265.347,265.682,266.352,268.027,269.032,269.367,270.372,270.707,271.712,272.047,272.717,273.052,273.387,273.722,274.057,275.062,276.067,277.742,278.077,278.412,278.747,279.082,280.255,280.757,281.427,281.762,282.097,282.432,283.437,284.442,284.777,285.782,286.62,287.457,287.96,288.462,289.467,289.802,290.137,290.64,292.482,293.32,293.822,294.827,295.162,295.497,296.502,296.837,297.172,297.507,297.842,299.517,300.187,300.857,301.192,301.862,303.202,303.537,304.877,305.212,305.547,306.217,306.887,307.557,307.892,308.227,308.562,309.567,310.237,310.907,311.577,312.582,312.917,313.252,313.922,314.257,315.597,315.932,316.267,316.937,317.607,318.277,318.612,318.947,319.282,320.287,320.957,321.627,321.962,322.297,322.632,322.967,323.637,323.972,324.977,325.312],
   note:'Charted to the song · 5:27',short:'SYNCED  5:27',c1:'#ff4d6d',c2:'#ff9a5a',play(){}},
- {id:'primate',name:'Primate Pulse',style:'Your upload',bpm:69.7674,file:'primate_pulse.mp3',gridBpm:139.535,phase:.757,len:211,loop:[0,210.7],sub:2,dif:4,
+ {id:'primate',b:{mode:'dt',name:'Double Time',sub:1},name:'Primate Pulse',style:'Your upload',bpm:69.7674,file:'primate_pulse.mp3',gridBpm:139.535,phase:.757,len:211,loop:[0,210.7],sub:2,dif:4,
   note:'70 BPM, half-beats count · 3:31',short:'70 BPM  3:31',c1:'#c6f05a',c2:'#ff9f3f',play(){}},
- {id:'swarm',name:'Swarm Song',style:'Your upload',bpm:120,file:'swarm_song.mp3',phase:.542,len:226,loop:[0,226],sub:1,dif:3,
+ {id:'swarm',b:{mode:'hard',name:'Hard Chart',sub:2},name:'Swarm Song',style:'Your upload',bpm:120,file:'swarm_song.mp3',phase:.542,len:226,loop:[0,226],sub:1,dif:3,
   note:'120 BPM · 3:46',short:'120 BPM  3:46',c1:'#ffdd55',c2:'#7fd8ff',play(){}},
- {id:'final',name:'Final Transmission',style:'Your upload',bpm:80.356,file:'final_transmission.mp3',phase:.404,len:259,loop:[0,258.35],sub:2,dif:3,
+ {id:'final',b:{mode:'cs',name:'Slowed + Chopped',rate:.8},name:'Final Transmission',style:'Your upload',bpm:80.356,file:'final_transmission.mp3',phase:.404,len:259,loop:[0,258.35],sub:2,dif:3,
   note:'80 BPM, half-beats count · 4:19',short:'80 BPM  4:19',c1:'#ff5ec8',c2:'#b49cff',play(){}}
 ];
+/* B-SIDES: every tape has a second side, a remix of the same song (Chopped & Screwed, Double Time, Half Time or a Hard Chart).
+   Side B opens once you earn an A rank (80% accuracy or better) on side A. */
+const BMODE={cs:{tag:'CHOPPED & SCREWED',col:'#b98cff',desc:'slowed down, pitched down and chopped. You fire on the slowed beat.'},
+  dt:{tag:'DOUBLE TIME',col:'#ffd23f',desc:'the whole swarm runs at twice the beat. Enemies march, dive and shoot twice as fast.'},
+  ht:{tag:'HALF TIME',col:'#4fc1ff',desc:'a heavy half-time groove. Enemies move at half speed but take an extra hit, and half-beats count.'},
+  hard:{tag:'HARD CHART',col:'#ff5a4e',desc:'half-beats count, more divers and more enemy fire.'}};
+let side=st('sb_side')==='B'?'B':'A',flipT=0,flipFrom=side,lockT=0;
+let RANKS={};try{RANKS=JSON.parse(st('sb_ranks')||'{}')||{}}catch(e){RANKS={}}
+const RV={C:1,B:2,A:3,S:4};
+const sideId=(x,sd)=>x.id+((sd||side)==='B'?'_B':'');
+const bOpen=x=>RV[RANKS[x.id]]>=3;
+function noteRank(id,r){if((RV[r]||0)>(RV[RANKS[id]]||0)){RANKS[id]=r;st('sb_ranks',JSON.stringify(RANKS))}}
+const BV=()=>side==='B'?song.b:null;
+let runB=null,rate=1,trans=0,mTr=0,bmode='',tfBase=1,chop=null;
+const subOf=()=>{const v=state==='play'?runB:BV();return v&&v.sub||song.sub||1};
 let sel=0;try{sel=Math.max(0,SONGS.findIndex(x=>x.id===st('sb_song')))}catch(e){}
 let song=SONGS[sel];
 let HI={};try{HI=JSON.parse(st('sb_his')||'{}')||{}}catch(e){HI={}}
 if(hi>(HI.neon||0))HI.neon=hi;
 const hiOf=id=>HI[id]||0;
-function sched(){if(song.file)return;while(nextT<ac.currentTime+.12){
+/* chopped: every 4th bar repeats its first half; every 8th bar ends on a stutter */
+function chopStep(s){const bar=Math.floor(s/16),i=s%16;if(bar%8===3&&i>=8)return s-8;if(bar%8===7&&i>=12)return bar*16+12+(i%2);return s}
+function sched(){if(song.file){if(chop)schedChops();return}while(nextT<ac.currentTime+.12){
   if(step%16===0&&pendBpm){bpm=pendBpm;pendBpm=0;segs.push({b:step/4,t:nextT,bpm})}
-  song.play(step,nextT,60/bpm/4,level);nextT+=60/bpm/4;step++}}
+  mTr=trans;try{song.play(bmode==='cs'&&!previewLoop?chopStep(step):step,nextT,60/bpm/4,level)}finally{mTr=0}nextT+=60/bpm/4;step++}}
+function chopPiece(t,off,len){if(!chop||off>=song.buf.duration)return;const s=ac.createBufferSource(),g=ac.createGain();s.buffer=song.buf;s.playbackRate.value=rate;s.connect(g);g.connect(chop.bus);
+  const d=len/rate,f=.003;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(1,t+f);g.gain.setValueAtTime(1,t+d-f);g.gain.linearRampToValueAtTime(0,t+d);
+  s.start(t,off);s.stop(t+d+.01);chop.srcs.push(s);s.onended=()=>{if(!chop)return;const i=chop.srcs.indexOf(s);if(i>=0)chop.srcs.splice(i,1)}}
+function schedChops(){const c=chop,sbl=60/song.bpm,bl=sbl/rate,src=b=>song.phase+b*sbl,out=b=>c.tB0+b*bl;
+  while(chop&&out(c.k*32)<ac.currentTime+.6&&src(c.k*32)<song.buf.duration){const B=c.k*32;
+    chopPiece(out(B),src(B),12*sbl);chopPiece(out(B+12),src(B+12),2*sbl);chopPiece(out(B+14),src(B+12),2*sbl);
+    chopPiece(out(B+16),src(B+16),12*sbl);chopPiece(out(B+28),src(B+28),3*sbl);for(let q=0;q<4;q++)chopPiece(out(B+31+q/4),src(B+31),sbl/4);c.k++}}
 let onLoaded=null,fileSrc=null,fileGain=null,want=null,songT0=0;
 function loadFile(x){if(!x.file||x.req)return;x.req=1;
   try{fetch(x.file).then(r=>{if(!r.ok)throw 0;return r.arrayBuffer()}).then(b=>{x.bytes=b;decodeFile(x)}).catch(()=>x.err=true)}catch(e){x.err=true}}
 function decodeFile(x){if(!ac||!x.bytes||x.buf)return;const b=x.bytes;x.bytes=null;
   ac.decodeAudioData(b,d=>{x.buf=d;try{waveOf(x)}catch(_){}if(onLoaded&&song===x){const f=onLoaded;onLoaded=null;setTimeout(f,0)}if(want&&song===x){const w=want;want=null;startMusic(w.preview)}},()=>x.err=true)}
-function stopFile(fade){if(!fileSrc)return;const s=fileSrc,g=fileGain;fileSrc=null;
+function stopFile(fade){if(chop){const c=chop;chop=null;try{if(fade)c.bus.gain.setTargetAtTime(.0001,ac.currentTime,.35)}catch(e){}c.srcs.forEach(x=>{try{x.stop(fade?ac.currentTime+2:0)}catch(e){}})}
+  if(!fileSrc)return;const s=fileSrc,g=fileGain;fileSrc=null;
   try{if(fade){g.gain.setTargetAtTime(.0001,ac.currentTime,.35);s.stop(ac.currentTime+2)}else s.stop()}catch(e){}}
 const fileReady=()=>!song.file||!!song.buf;
 let fadeNext=false;
-function startMusic(preview){stopFile(false);resetTempo();bpm=song.bpm;pendBpm=0;want=null;chartOn=false;previewLoop=!!preview;
+function startMusic(preview){stopFile(false);const v=preview?BV():runB;rate=v&&v.rate||1;trans=v&&v.tr||0;bmode=v?v.mode:'';tfBase=bmode==='dt'?2:bmode==='ht'?.5:1;resetTempo();bpm=song.bpm*rate;pendBpm=0;want=null;chartOn=false;previewLoop=!!preview;
   if(song.file){if(!song.buf){want={preview};playing=false;loadFile(song);decodeFile(song);return}
     const o=preview?song.loop[0]:0,t0=ac.currentTime+.1;
-    fileSrc=ac.createBufferSource();fileSrc.buffer=song.buf;fileGain=ac.createGain();fileGain.gain.value=1;
+    if(bmode==='cs'&&!preview&&!song.chart){const bus=ac.createGain();bus.connect(master);chop={bus,srcs:[],tB0:t0+song.phase/rate,k:0};fileGain=bus;
+      if(song.phase>.005)chopPiece(t0,0,song.phase);schedChops();
+      songT0=t0;segs=[{b:0,t:chop.tB0,bpm}];chartOn=false;lastBeat=Math.floor(beatAt(t0))-1;playing=true;return}
+    fileSrc=ac.createBufferSource();fileSrc.playbackRate.value=rate;fileSrc.buffer=song.buf;fileGain=ac.createGain();fileGain.gain.value=1;
     fileSrc.connect(fileGain);fileGain.connect(master);
     if(preview&&fadeNext){fileGain.gain.setValueAtTime(.0001,t0);fileGain.gain.exponentialRampToValueAtTime(1,t0+1.4)}
     if(preview){fileSrc.loop=true;fileSrc.loopStart=song.loop[0];fileSrc.loopEnd=song.loop[1]}
-    fileSrc.start(t0,o);songT0=t0-o;segs=[{b:0,t:songT0+song.phase,bpm}];chartOn=!!song.chart;lastBeat=Math.floor(beatAt(t0))-1;playing=true;return}
+    fileSrc.start(t0,o);songT0=t0-o/rate;segs=[{b:0,t:songT0+song.phase/rate,bpm}];chartOn=!!song.chart;lastBeat=Math.floor(beatAt(t0))-1;playing=true;return}
   const t0=ac.currentTime+.12;segs=[{b:0,t:t0,bpm}];nextT=t0;step=0;lastBeat=-1;playing=true}
 let chartOn=false,previewLoop=false;
 const gridP=()=>60/song.bpm/(song.origSub||song.sub||1);
@@ -275,13 +306,13 @@ function chartTime(b){const T=song.chart,n=T.length;if(b<0)return T[0]+b*gridP()
 /* tempo factor: the game's beat runs at tf x the music's beat. Changes keep the beat continuous at the moment they happen. */
 let tf=1,tfB0=0,tfX0=0;
 /* switches snap to the nearest music beat, so game beats always land on real beats of the song */
-function setTempoFactor(n){if(!ac){tf=n;return}const t=ac.currentTime,b=Math.round(beatAt(t)),x=Math.round(baseBeatAt(t));tfB0=b;tfX0=x;tf=n}
-function resetTempo(){tf=1;tfB0=0;tfX0=0}
+function setTempoFactor(n){n=tfBase===1?n:Math.max(.5,Math.min(2,n*tfBase));if(!ac){tf=n;return}const t=ac.currentTime,b=Math.round(beatAt(t)),x=Math.round(baseBeatAt(t));tfB0=b;tfX0=x;tf=n}
+function resetTempo(){tf=tfBase;tfB0=0;tfX0=0}
 function beatAt(t){const x=baseBeatAt(t);return tf===1&&tfB0===tfX0?x:tfB0+(x-tfX0)*tf}
 function timeOfBeat(b){return baseTimeOfBeat(tf===1&&tfB0===tfX0?b:tfX0+(b-tfB0)/tf)}
-function baseBeatAt(t){if(chartOn){let x=t-songT0;if(previewLoop){const L=song.loop[1]-song.loop[0];x=song.loop[0]+(((x-song.loop[0])%L)+L)%L}return chartBeat(x)}
+function baseBeatAt(t){if(chartOn){let x=(t-songT0)*rate;if(previewLoop){const L=song.loop[1]-song.loop[0];x=song.loop[0]+(((x-song.loop[0])%L)+L)%L}return chartBeat(x)}
   let s=segs[0];for(const g of segs)if(g.t<=t)s=g;return s.b+(t-s.t)*s.bpm/60}
-function baseTimeOfBeat(b){if(chartOn)return songT0+chartTime(b);let s=segs[0];for(const g of segs)if(g.b<=b)s=g;return s.t+(b-s.b)*60/s.bpm}
+function baseTimeOfBeat(b){if(chartOn)return songT0+chartTime(b)/rate;let s=segs[0];for(const g of segs)if(g.b<=b)s=g;return s.t+(b-s.b)*60/s.bpm}
 const sfx=(f)=>{if(ac&&!muted)f(ac.currentTime)};
 setInterval(()=>{if(ac&&playing&&!paused)sched()},25);
 
@@ -295,7 +326,7 @@ const pop=(s,x,y,c)=>pops.push({s,x,y,c,t:0});
 /* enemy registry: each type can plug in its own update / draw / hit rule / beat behaviour.
    Types without hooks use the classic formation-and-dive behaviour. */
 const EN={};
-function loudNow(){if(song.file&&song.wave&&playing&&ac){const i=Math.floor((ac.currentTime-songT0)*100);if(i>=0&&i<song.wave.length)return song.wave[i]}return .35+.5*pulse}
+function loudNow(){if(song.file&&song.wave&&playing&&ac){const i=Math.floor((ac.currentTime-songT0)*rate*100);if(i>=0&&i<song.wave.length)return song.wave[i]}return .35+.5*pulse}
 // beats an on-beat shot needs to climb to height y (so rhythm enemies line up with shots fired on the beat)
 function travelBeats(y){const b0=Math.floor(beat),bl=Math.max(.15,timeOfBeat(b0+1)-timeOfBeat(b0));return((py-10)-y)/270/bl}
 const frac1=x=>x-Math.floor(x);
@@ -395,7 +426,7 @@ EN.conductor={r:[9,11],
     const a=-.6+Math.sin(beat*Math.PI)*.9;cx.strokeStyle='#f4f1ff';cx.lineWidth=1;cx.beginPath();cx.moveTo(x+5,y-2);cx.lineTo(x+5+Math.cos(a)*10,y-2+Math.sin(a)*10);cx.stroke();
     cx.fillStyle=col;cx.fillRect(Math.round(x+5+Math.cos(a)*10)-1,Math.round(y-2+Math.sin(a)*10)-1,2,2);
     cx.fillStyle='#ffffff1c';cx.fillRect(x-14,y+14,28,2);cx.fillStyle=col;cx.fillRect(x-14,y+14,28*Math.max(0,e.hp)/14,2)}};
-function resetTempoKeep(){if(tf!==1)setTempoFactor(1)}
+function resetTempoKeep(){if(tf!==tfBase)setTempoFactor(1)}
 
 const METRO_ROWS=["....ppp....","...pyyyp...","..pyykyyp..","..pyykyyp..",".pyyykyyyp.",".pyyyyyyyp.","pyywyyywyyp","pyyyyyyyyyp","ppppppppppp"];
 SP.metro=[spr(METRO_ROWS),spr(METRO_ROWS,{y:'w'})];
@@ -435,7 +466,7 @@ function feverEnd(){if(!fever)return;fever=null;try{fxShelf.gain.setTargetAtTime
 
 /* TEMPO SHIFTS (built-in tracks, stage 4+): once per wave the beat drops to half time or jumps to double time for two bars,
    with a countdown so you can see it coming. */
-function planShift(){shift=null;if(song.file||level<4||level%3===0||en.some(e=>e.type==='conductor'))return;
+function planShift(){shift=null;if(tfBase!==1||song.file||level<4||level%3===0||en.some(e=>e.type==='conductor'))return;
   shift={at:stageB+4+4*(2+rint(3)),mode:rng()<.5?'half':'double',on:false}}
 function shiftBeat(b){if(!shift)return;
   if(!shift.on&&b>=shift.at-4&&b<shift.at){const n=shift.at-b;pop((shift.mode==='half'?'HALF TIME IN ':'DOUBLE TIME IN ')+n,120,236,'#ffd23f');sfx(t=>tone(t,n===1?84:79,'square',.04,.06))}
@@ -483,7 +514,7 @@ function spawnSpecials(list){const c=t=>list.filter(x=>x===t).length;
 function spawnWave(b){resetTempoKeep();en=[];stageB=b;cap=null;stageDeaths=deaths;
   if(level%3!==0&&level>=2)spawnSpecials(waveMix(level));
   cr=null;planShift();
-  const add=(type,row,cols)=>cols.forEach(c=>en.push({type,row,col:c,hp:type==='boss'?2:1,st:'in',x:120,y:-20}));
+  const hv=runB&&runB.mode==='ht'?1:0,add=(type,row,cols)=>cols.forEach(c=>en.push({type,row,col:c,hp:(type==='boss'?2:1)+hv,st:'in',x:120,y:-20}));
   if(level%3===0){const hp=30+10*(level/3-1);add('fly',3,[2,3,4,5,6,7]);
     boss={kind:SKULLS[(level/3-1)%4],x:120,y:-40,hp,max:hp,tx:120,warnAt:-99,beamFrom:-99,beamTo:-99,stunTo:-99,flash:0};sfx(t=>{tone(t,57,'sawtooth',.1,.5,1200);tone(t+.5,57,'sawtooth',.1,.5,1200)});return}
   add('boss',0,[3,4,5,6]);add('fly',1,[1,2,3,4,5,6,7,8]);add('fly',2,[1,2,3,4,5,6,7,8]);
@@ -495,19 +526,23 @@ function fpos(e){const sw=Math.sin(beat*Math.PI/4)*14,spread=1+.06*pulse;
 
 function setState(v){if(v==='title'&&chartTesting){chartTesting=false;applyCharts()}state=v;document.body.classList.toggle('charting',v==='edit'||v==='chart');document.querySelectorAll('#tracks button').forEach(b=>b.disabled=v==='play'||v==='insert'||v==='chart'||v==='edit'||v==='clear'||v==='outro');if(typeof renderChartUI==='function')renderChartUI()}
 let practiceStage=1,practice=false;
-function start(){if(!ac)initAudio();if(ac.state==='suspended')ac.resume();
+function start(){if(!ac)initAudio();if(ac.state==='suspended')ac.resume();if(side==='B'&&!bOpen(song)){lockedBuzz();setState('title');return}runB=BV();
   score=0;lives=selMods.includes('onelife')?1:3;combo=0;best=0;level=1;px=120;inv=0;dead=0;jam=0;shots=[];eb=[];parts=[];pops=[];en=[];
   seedRun(nextSeed||((Date.now()^(performance.now()*1e3))>>>0));nextSeed=0;practice=practiceStage>1;resetTempo();endLaser();laser=null;perfStreak=0;feverEnd();shift=null;cr=null;boss=null;cap=null;py=296;stats={p:0,g:0,m:0};runBlind=!guides;runMods=(runBlind?['blind']:[]).concat(selMods);deaths=0;stageDeaths=0;noHit=0;startMusic(false);firedBeat=-99;won=false;clearB=-1;paused=false;setState('play');
-  if(practice){level=practiceStage;if(!song.file&&segs[0]){bpm=Math.min(song.bpm+8*(level-1),song.bpm+64);segs[0].bpm=bpm}}spawnWave(0)}
+  if(practice){level=practiceStage;if(!song.file&&segs[0]){bpm=Math.min(song.bpm+8*(level-1),song.bpm+64)*rate;segs[0].bpm=bpm}}spawnWave(0)}
 function pick(i,preview){onLoaded=null;if(i!==sel){slideDir=i>sel?1:-1;slideT=performance.now()}sel=(i+SONGS.length)%SONGS.length;song=SONGS[sel];loadFile(song);st('sb_song',song.id);level=1;
   const c=document.querySelector('.cab');c.style.setProperty('--c1',song.c1);c.style.setProperty('--c2',song.c2);
   mq.querySelector('small').textContent=song.name.toUpperCase();renderTracks();if(typeof renderChartUI==='function'){take=take&&take.id===song.id?take:null;chartMsg='';renderChartUI()}
   if(state==='over')setState('title');
   if(ac&&!preview){stopFile(true);playing=false}
   if(preview){if(!ac)initAudio();if(ac.state==='suspended')ac.resume();startMusic(true)}}
+function lockedBuzz(){lockT=performance.now();sfx(t=>{tone(t,40,'square',.08,.12,900);tone(t+.13,36,'square',.08,.16,900)})}
+function flipSide(){if(!(state==='title'||state==='over'))return;if(state==='over')setState('title');flipFrom=side;side=side==='A'?'B':'A';st('sb_side',side);flipT=performance.now();lockT=0;
+  sfx(t=>{noise(t,900,.12,.06);tone(t+.16,45,'square',.08,.05,700);noise(t+.2,2400,.08,.04)});renderTracks();
+  if(playing&&ac){fadeNext=true;setTimeout(()=>{if(state==='title')startMusic(true)},190)}}
 function renderTracks(){const x=song,dis=state==='play'?'disabled':'',tri=d=>`<svg viewBox="0 0 22 26" aria-hidden="true"><path d="${d}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
   document.getElementById('tracks').innerHTML=`<button class="arr" data-d="-1" aria-label="Previous track" ${dis}>${tri('M18 3 L4 13 L18 23 Z')}</button>`+
-  `<div class="card" style="--a:${x.c1}" aria-live="polite"><b>${x.name}</b><span>${x.style} · ${x.note||x.bpm+' BPM start'}</span><em>${bestLabel()}<br>${hiOf(menuKey(x))}</em></div>`+
+  `<div class="card" style="--a:${side==='B'?BMODE[x.b.mode].col:x.c1}" aria-live="polite"><b>${x.name}${side==='B'?' <small style="color:'+BMODE[x.b.mode].col+'">· B-side</small>':''}</b><span>${side==='B'?BMODE[x.b.mode].tag.toLowerCase().replace(/^./,c=>c.toUpperCase())+': '+BMODE[x.b.mode].desc+(bOpen(x)?'':' <b style="color:#ff9f3f">Locked: get an A rank on side A.</b>'):x.style+' · '+(x.note||x.bpm+' BPM start')}</span><em>${bestLabel()}<br>${hiOf(menuKey(x))}</em><button class="flip" data-flip="1" ${dis}>Flip to side ${side==='A'?'B':'A'}${side==='A'&&!bOpen(x)?' 🔒':''}</button></div>`+
   `<button class="arr" data-d="1" aria-label="Next track" ${dis}>${tri('M4 3 L18 13 L4 23 Z')}</button>`}
 const bestLabel=()=>{const l=menuMods();return l.length?'best '+multStr(multOf(l)):'best'};
 const fmt=v=>Math.floor(v/60)+':'+String(Math.floor(v%60)).padStart(2,'0');
@@ -538,6 +573,8 @@ function updBoss(dt){const B=boss,k=Math.min(1,Math.max(0,(beat-stageB)/4)),phas
   for(const s of shots){if(!s.dead&&Math.abs(s.x-B.x)<17&&Math.abs(s.y-B.y)<10){s.dead=1;B.hp-=beat<B.stunTo?2:1;B.flash=.07;
     burst(s.x,s.y-2,'#f4f1ff',3);sfx(t=>tone(t,52,'square',.06,.04));if(B.hp<=0){killBoss();return}}}}
 function killBoss(){rumble(1,1,500);const B=boss,m=mult(),pts=award(5000*m);
+  if(!song.file&&level===6&&!practice){const h=stats.p+stats.g+stats.m,acc=h?(stats.p+stats.g*.5)/h:0,rk=acc>=.92?'S':acc>=.8?'A':acc>=.65?'B':'C',was=bOpen(song);noteRank(sideId(song),rk);
+    if(side==='A'&&!was&&bOpen(song)){pop('SIDE B UNLOCKED!',120,146,'#b98cff');renderTracks();sfx(t=>[67,71,74,79].forEach((n,i)=>tone(t+.5+i*.09,n,'square',.05,.15,4000)))}}
   for(let i=0;i<6;i++)burst(B.x+(Math.random()-.5)*44,B.y+(Math.random()-.5)*18,[song.c1,song.c2,'#f4f1ff'][i%3],26);
   pop('BOSS DOWN +'+pts,120,130,'#ffd23f');sfx(t=>{noise(t,200,.6,.9);tone(t,40,'sawtooth',.2,.8,600)});
   en.forEach(e=>{award(PTS[e.type]*m);burst(e.x,e.y,COL[e.type],12)});en=[];eb=[];cap=null;boss=null}
@@ -550,9 +587,10 @@ function onBeat(b){
   shiftBeat(b);
   if(boss)bossBeat(b);
   for(const e of en){const T=EN[e.type];if(T&&T.beat)T.beat(e,b)}
-  if(b%8===0)for(let i=0;i<Math.min(1+Math.floor(level/2),4);i++)launch(b);
-  if(b%2===0)en.forEach(e=>{if(e.st==='dive'&&e.y<220&&rng()<.45+level*.05)eshoot(e)});
-  if(b%4===2){const f=en.filter(e=>e.st==='form');if(f.length&&rng()<.4+level*.06)eshoot(f[rint(f.length)])}
+  const hd=runB&&runB.mode==='hard'?1:0;
+  if(b%8===0||(hd&&b%8===4))for(let i=0;i<Math.min(1+Math.floor(level/2),4);i++)launch(b);
+  if(b%2===0)en.forEach(e=>{if(e.st==='dive'&&e.y<220&&rng()<.45+level*.05+hd*.2)eshoot(e)});
+  if(b%4===2||(hd&&b%4===0)){const f=en.filter(e=>e.st==='form');if(f.length&&rng()<.4+level*.06)eshoot(f[rint(f.length)])}
 }
 
 function fire(){
@@ -563,7 +601,7 @@ function fire(){
   if(state!=='play'){if(!fileReady()){if(!ac)initAudio();want={preview:true};loadFile(song);decodeFile(song);return}if(state==='title'&&insertAnim)beginInsert();else if(state==='title'||(state==='over'&&performance.now()-overAt>900))start();return}
   if(paused){pauseSel?toMenu():togglePause();return}
   if(dead>0)return;
-  const g=Math.max(song.sub||1,syncAlive()||crActive()?2:1),t=ac.currentTime-offset/1000,nb=Math.round(beatAt(t)*g),err=Math.abs(timeOfBeat(nb/g)-t)*1000;
+  const g=Math.max(subOf(),syncAlive()||crActive()?2:1),t=ac.currentTime-offset/1000,nb=Math.round(beatAt(t)*g),err=Math.abs(timeOfBeat(nb/g)-t)*1000;
   if(jam>0||nb===firedBeat||err>110||(err>55&&hasMod('nogreat'))){stats.m++;combo=0;perfStreak=0;jam=.2;if(cap)cap.n=0;pop(err>55&&err<=110&&hasMod('nogreat')?'NOT PERFECT':'MISS',px,py-12,'#ff5a4e');sfx(t0=>tone(t0,38,'sawtooth',.12,.12,900));
     if(hasMod('fragile')&&dead<=0&&inv<=0&&!cap){pop('FRAGILE!',px,py-24,'#ff9f3f');die()}return}
   firedBeat=nb;combo++;best=Math.max(best,combo);const isOff=g===2&&((nb%2)+2)%2===1,n0=shots.length;
@@ -626,8 +664,8 @@ function update(dt){
   for(const b of eb){b.x+=b.vx*dt;b.y+=b.vy*dt;
     if(dead<=0&&inv<=0&&!cap&&Math.abs(b.x-px)<4.5&&Math.abs(b.y-py)<6){b.y=999;die();break}}
   eb=eb.filter(b=>b.y<H+6);
-  if(song.file&&ac.currentTime>songT0+song.len&&lives>0){beginClear();return}
-  if(state==='play'&&!en.length&&!boss&&clearB<0){level++;if(!song.file)pendBpm=Math.min(bpm+8,song.bpm+64);clearB=(Math.floor(beat/4)+2)*4;const sb=award(1000*(level-1));
+  if(song.file&&ac.currentTime>songT0+song.len/rate&&lives>0){beginClear();return}
+  if(state==='play'&&!en.length&&!boss&&clearB<0){level++;if(!song.file)pendBpm=Math.min(bpm+8*rate,(song.bpm+64)*rate);clearB=(Math.floor(beat/4)+2)*4;const sb=award(1000*(level-1));
     pop('+'+sb,120,190,'#ffd23f');
     if(deaths===stageDeaths){noHit++;const nb=award(2500*(level-1));pop('NO-HIT +'+nb,120,206,'#3fe0d0');sfx(t=>{tone(t+.1,84,'square',.05,.08,5000);tone(t+.2,91,'square',.05,.12,5000)})}}
 }
@@ -647,7 +685,10 @@ function reel(x,y,a){cx.fillStyle='#f4ecd8';cx.beginPath();cx.arc(x,y,8,0,6.283)
 function drawCassette(fr,spin){
   const u=Math.min(1,(performance.now()-slideT)/260),e=1-(1-u)**3,ox=Math.round(slideDir*90*(1-e)),X=30+ox,Y=98,Wd=180,Hd=114;
   cx.save();cx.globalAlpha=.35+.65*e;
-  const shell=mix(song.c1,'#160f38',.78),edge=mix(song.c1,'#160f38',.45),ink='#1b0f3d';
+  // flip: squash to nothing, swap sides at the midpoint, open back up
+  const fu=Math.min(1,(performance.now()-flipT)/420),sd=fu<.5?flipFrom:side,isB=sd==='B';
+  if(fu<1){const k=Math.max(.02,Math.abs(Math.cos(fu*Math.PI)));cx.translate(X+Wd/2,Y+Hd/2);cx.scale(k,1-.06*Math.sin(fu*Math.PI));cx.translate(-(X+Wd/2),-(Y+Hd/2))}
+  const BM=BMODE[song.b.mode],shell=mix(isB?BM.col:song.c1,'#160f38',isB?.84:.78),edge=mix(isB?BM.col:song.c1,'#160f38',.45),ink='#1b0f3d';
   // shell
   rrect(X,Y,Wd,Hd,7);cx.fillStyle=shell;cx.fill();cx.strokeStyle=edge;cx.lineWidth=1;rrect(X+.5,Y+.5,Wd-1,Hd-1,7);cx.stroke();
   cx.fillStyle='#ffffff10';cx.fillRect(X+6,Y+2,Wd-12,1);
@@ -656,24 +697,31 @@ function drawCassette(fr,spin){
   // paper label with colour stripes
   const LX=X+10,LY=Y+7,LW=Wd-20,LH=74;
   rrect(LX,LY,LW,LH,3);cx.fillStyle='#f4ecd8';cx.fill();
-  cx.fillStyle=song.c1;cx.fillRect(LX,LY+3,LW,5);cx.fillStyle=song.c2;cx.fillRect(LX,LY+9,LW,2);
-  txt('A',LX+6,LY+22,6,ink,'left');
+  if(isB){cx.fillStyle='#e6dcc4';rrect(LX,LY,LW,LH,3);cx.fill();cx.fillStyle=BM.col;cx.fillRect(LX,LY+3,LW,2);cx.fillRect(LX,LY+7,LW,2);cx.fillStyle=song.c1;cx.fillRect(LX,LY+11,LW,1)}
+  else{cx.fillStyle=song.c1;cx.fillRect(LX,LY+3,LW,5);cx.fillStyle=song.c2;cx.fillRect(LX,LY+9,LW,2)}
+  txt(isB?'B':'A',LX+6,LY+22,6,isB?mix(BM.col,ink,.35):ink,'left');
   txt(song.name.toUpperCase(),X+Wd/2,LY+24,song.name.length>15?7:8,ink);
-  txt(song.style.toUpperCase(),X+Wd/2,LY+35,6,'#6a5aa0');
+  txt(isB?BM.tag:song.style.toUpperCase(),X+Wd/2,LY+35,6,isB?mix(BM.col,'#1b0f3d',.45):'#6a5aa0');
   // window with reels
   const WX=X+40,WY=LY+41,WW=Wd-80,WH=24;
   rrect(WX,WY,WW,WH,4);cx.fillStyle='#120c2a';cx.fill();
   const r1x=WX+14,r2x=WX+WW-14,ry=WY+WH/2,ang=spin!=null?spin:(playing?beat*Math.PI/2:0);
   cx.fillStyle='#4a2e1a';cx.fillRect(r1x,ry+6,r2x-r1x,2);
   reel(r1x,ry,ang);reel(r2x,ry,ang+.4);
-  const info=song.file?(song.err?'ERROR':song.buf?(song.chart?'SYNCED':Math.round(song.bpm)+' BPM'):'LOADING'):song.bpm+' BPM';
+  const bR=isB&&song.b.rate||1,bT=isB&&song.b.mode==='dt'?2:isB&&song.b.mode==='ht'?.5:1,shownBpm=Math.round(song.bpm*bR*bT*(isB&&song.b.mode==='dt'&&song.sub===2?.5:1));
+  const info=song.file?(song.err?'ERROR':song.buf?(song.chart?'SYNCED':shownBpm+' BPM'):'LOADING'):shownBpm+' BPM';
   txt(info,X+Wd/2,ry+3,6,song.err?'#ff5a4e':'#f4ecd8');
   // difficulty pips on the label
-  for(let i=0;i<5;i++){cx.fillStyle=i<diff(song)?song.c1:'#d8ceb4';cx.fillRect(Math.round(X+Wd/2-24+i*10),LY+LH-6,7,4)}
+  const dv=Math.min(5,diff(song)+(isB?1:0));for(let i=0;i<5;i++){cx.fillStyle=i<dv?(isB?BM.col:song.c1):'#d8ceb4';cx.fillRect(Math.round(X+Wd/2-24+i*10),LY+LH-6,7,4)}
   // tape-head bay
   const BY=Y+Hd-30;cx.fillStyle=edge;cx.beginPath();cx.moveTo(X+34,BY);cx.lineTo(X+Wd-34,BY);cx.lineTo(X+Wd-26,Y+Hd-2);cx.lineTo(X+26,Y+Hd-2);cx.closePath();cx.fill();
   cx.fillStyle='#120c2a';[X+48,X+Wd-52].forEach(a=>cx.fillRect(a,Y+Hd-12,4,6));cx.fillRect(X+Wd/2-6,Y+Hd-10,12,4);
-  txt((menuMods().length?'BEST '+multStr(multOf(menuMods()))+' ':'BEST ')+hiOf(menuKey(song)),X+Wd/2,BY+12,6,'#f4ecd8');
+  const locked=isB&&!bOpen(song);
+  if(locked){const sh=performance.now()-lockT<400?Math.round(Math.sin((performance.now()-lockT)/22)*3):0;
+    cx.globalAlpha=.35+.65*e;cx.fillStyle='#1a1238';rrect(LX-1,LY-1,LW+2,LH+2,3);cx.fill();cx.strokeStyle=mix(BM.col,'#1a1238',.5);cx.lineWidth=1;rrect(LX+.5,LY+.5,LW-1,LH-1,3);cx.stroke();
+    txt('SIDE B · '+BM.tag,X+Wd/2,LY+14,5.5,BM.col);const lx=X+Wd/2+sh,ly=LY+38;cx.strokeStyle='#ffd23f';cx.lineWidth=2;cx.beginPath();cx.arc(lx,ly-5,5,Math.PI,0);cx.stroke();cx.fillStyle='#ffd23f';cx.fillRect(lx-7,ly-5,14,11);cx.fillStyle='#120c2a';cx.fillRect(lx-1,ly-2,2,4);
+    txt('LOCKED',X+Wd/2+sh,ly+22,7,'#ffd23f');txt('A-RANK SIDE A TO OPEN',X+Wd/2,BY+12,5.5,'#f4ecd8')}
+  else txt((menuMods().length?'BEST '+multStr(multOf(menuMods()))+' ':'BEST ')+hiOf(menuKey(song)),X+Wd/2,BY+12,6,'#f4ecd8');
   // modifier stickers on the shell's lower corners (up to 3 each side)
   menuMods().forEach((k,i)=>{const M=MODS[k],sx=i<3?X+4:X+Wd-26,sy=Y+Hd-31+(i%3)*10,ang=(i%2?-1:1)*.06;
     cx.save();cx.translate(sx+11,sy+4);cx.rotate(ang);cx.fillStyle=M.col;rrect(-11,-4,22,9,2);cx.fill();cx.fillStyle='#1b0f3d';cx.font='5px "Press Start 2P",monospace';cx.textAlign='center';cx.fillText(M.code,0,3);cx.restore()});
@@ -871,18 +919,19 @@ const multOf=list=>list.reduce((m,k)=>m*(MODS[k]?MODS[k].mult:1),1);
 const multStr=m=>'×'+(Math.round(m*100)/100).toFixed(2).replace(/0$/,'').replace(/\.0$/,'');
 const scoreMult=()=>runMods.reduce((m,k)=>m*(MODS[k]?MODS[k].mult:1),1);
 const keyFor=(id,mods)=>id+mods.filter(k=>MODS[k]).sort().map(k=>'_'+MODS[k].tag).join('');
-const BL=scoreMult,hiKey=()=>practice?'__practice':keyFor(song.id,runMods),menuKey=x=>keyFor(x.id,menuMods());
+const BL=scoreMult,hiKey=()=>practice?'__practice':keyFor(sideId(song),runMods),menuKey=x=>keyFor(sideId(x),menuMods());
 function award(p){const v=Math.round(p*BL()*(fever?2:1));score+=v;return v}
 let stats={p:0,g:0,m:0},warp=1,clr=null,outT=0,titleFade=0;
 function beginClear(){const bonus=Math.round(lives*5000*BL()),flaw=deaths===0?Math.round(25000*BL()):0,total=score+bonus+flaw,hit=stats.p+stats.g+stats.m,acc=hit?(stats.p+stats.g*.5)/hit:0;
   clr={t0:performance.now(),base:score,bonus,total,acc,rank:acc>=.92?'S':acc>=.8?'A':acc>=.65?'B':'C',newHi:total>hiOf(hiKey()),flaw,blind:runBlind,sx:px,shown:0,slam:false,fw:0,ticks:0};
+  if(!practice){const was=bOpen(song);noteRank(sideId(song),clr.rank);clr.unlocked=side==='A'&&!was&&bOpen(song)}
   won=true;score=total;if(clr.newHi){HI[hiKey()]=total;st('sb_his',JSON.stringify(HI))}
   eb=[];shots=[];cap=null;playing=false;stopFile(true);
   en.slice().sort((a,b)=>a.x-b.x).forEach((e,i)=>e.boomAt=.15+i*.06);if(boss)boss.boomAt=.1;
   setState('clear');
   sfx(t=>{[72,76,79,84,79,84].forEach((m,i)=>tone(t+.25+i*.11,m,'square',.05,.12,4000));[84,88,91].forEach(m=>tone(t+.25+6*.11,m,'triangle',.07,.9));noise(t+.25+6*.11,3000,.2,.8)})}
 function clrLines(){const L=[['PERFECT',stats.p,'#ffd23f'],['GREAT',stats.g,'#3fe0d0'],['MISS',stats.m,'#ff5a4e'],['BEST COMBO',best,'#f4f1ff'],['ACCURACY',Math.round(clr.acc*100)+'%','#f4f1ff'],['LIVES BONUS','+'+clr.bonus,song.c2]];
-  if(clr.flaw)L.push(['FLAWLESS','+'+clr.flaw,'#ffd23f']);if(clr.blind)L.push(['BLIND BONUS','×1.5',song.c1]);const om=runMods.filter(k=>k!=='blind');if(om.length)L.push(['MODIFIERS',multStr(multOf(om)),'#c9a7ff']);return L}
+  if(clr.flaw)L.push(['FLAWLESS','+'+clr.flaw,'#ffd23f']);if(clr.blind)L.push(['BLIND BONUS','×1.5',song.c1]);const om=runMods.filter(k=>k!=='blind');if(om.length)L.push(['MODIFIERS',multStr(multOf(om)),'#c9a7ff']);if(clr.unlocked)L.push(['SIDE B','UNLOCKED','#b98cff']);return L}
 function updClear(dt){const t=(performance.now()-clr.t0)/1000;
   for(const e of en)if(t>=e.boomAt&&!e.gone){e.gone=1;burst(e.x,e.y,COL[e.type],14);if(Math.random()<.5)sfx(x=>noise(x,900,.15,.12))}
   en=en.filter(e=>!e.gone);
@@ -969,15 +1018,15 @@ function draw(){
       cx.globalAlpha=1-d/3*.7;cx.fillStyle='#3fe0d0';cx.fillRect(Math.round(120-o)-1,gy-3,2,7);cx.fillRect(Math.round(120+o)-1,gy-3,2,7)}
     if(state==='play'&&guides)for(let k=0;k<5;k++){const bt=Math.ceil(beat)+k,L=holdLen(bt);if(!L)continue;const d=chartOn?(timeOfBeat(bt)-ac.currentTime)/1.7*3:bt-beat,d2=chartOn?(timeOfBeat(bt+L)-ac.currentTime)/1.7*3:bt+L-beat;if(d>3)continue;
       const o1=Math.max(0,d)/3*64,o2=Math.min(3,d2)/3*64;cx.globalAlpha=.85;cx.fillStyle='#ffd23f';cx.fillRect(Math.round(120+o1),gy-2,Math.max(1,Math.round(o2-o1)),5);cx.fillRect(Math.round(120-o2),gy-2,Math.max(1,Math.round(o2-o1)),5);cx.globalAlpha=1}
-    if(song.sub===2||syncAlive()||crActive())for(let k=0;k<4;k++){const d=Math.ceil(beat-.5)+.5+k-beat;if(d>3)continue;const o=d/3*64;
+    if(subOf()===2||syncAlive()||crActive())for(let k=0;k<4;k++){const d=Math.ceil(beat-.5)+.5+k-beat;if(d>3)continue;const o=d/3*64;
       cx.globalAlpha=.8-d/3*.6;cx.fillStyle='#3fe0d0';cx.fillRect(Math.round(120-o)-.5,gy-1,1,3);cx.fillRect(Math.round(120+o)-.5,gy-1,1,3)}
     cx.globalAlpha=1;cx.fillStyle=`rgba(255,210,63,${.25+.75*pulse})`;cx.fillRect(117,gy-4,6,9)}
-  if(state==='play'&&song.file){const f=Math.min(1,(ac.currentTime-songT0)/song.len);cx.fillStyle='#ffffff14';cx.fillRect(0,0,W,2);cx.fillStyle=song.c2;cx.fillRect(0,0,W*f,2)}
+  if(state==='play'&&song.file){const f=Math.min(1,(ac.currentTime-songT0)*rate/song.len);cx.fillStyle='#ffffff14';cx.fillRect(0,0,W,2);cx.fillStyle=song.c2;cx.fillRect(0,0,W*f,2)}
   if(state!=='insert'&&state!=='chart'&&state!=='edit'&&state!=='clear'&&state!=='outro')for(let i=0;i<lives-(dead>0?0:1)&&i<5;i++)cx.drawImage(SP.ship,6+i*12,gy-6);
   if(state!=='title'&&state!=='insert'&&state!=='chart'&&state!=='edit'&&state!=='clear'&&state!=='outro'){txt('×'+mult(),234,gy+3,7,mult()>1?'#ffd23f':'#b9b0e6','right');txt(combo+'',206,gy+3,6,'#b9b0e6','right')}
   // overlays
   if(state==='play'){
-    if(beat>=stageB-.01&&beat<stageB+4){if(boss){if(Math.floor(beat*2)%2===0)txt('WARNING',120,150,12,'#ff5a4e');txt(boss.kind.name,120,168,8,song.c2)}else txt('STAGE '+level,120,170,10,'#ffd23f');txt(song.file?'SONG '+fmt(Math.max(0,song.len-(ac.currentTime-songT0)))+' LEFT':bpm+' BPM',120,186,7,'#3fe0d0');
+    if(beat>=stageB-.01&&beat<stageB+4){if(boss){if(Math.floor(beat*2)%2===0)txt('WARNING',120,150,12,'#ff5a4e');txt(boss.kind.name,120,168,8,song.c2)}else txt('STAGE '+level,120,170,10,'#ffd23f');txt(song.file?'SONG '+fmt(Math.max(0,(song.len-(ac.currentTime-songT0)*rate)/rate))+' LEFT':bpm+' BPM',120,186,7,'#3fe0d0');
       const n=4-Math.floor(beat-stageB);txt(n>1?String(n-1):'GO!',120,206,8,'#f4f1ff')}
     if(clearB>=0)txt('STAGE CLEAR',120,170,10,'#ffd23f');
     if(paused){cx.fillStyle='#05031ae8';cx.fillRect(0,0,W,H);const by=pauseBtnY();
@@ -992,18 +1041,20 @@ function draw(){
     if(cassette)drawCassette(fr);else{
     cx.fillStyle='#ffffff10';cx.fillRect(26,104,188,104);cx.strokeStyle=song.c1;cx.lineWidth=1;cx.strokeRect(26.5,104.5,187,103);
     txt('SELECT TRACK',120,118,6,'#b9b0e6');
-    txt(song.name.toUpperCase(),120,140,9,song.c2);txt(song.style,120,156,6,'#f4f1ff');
+    txt(song.name.toUpperCase(),120,140,9,song.c2);txt(side==='B'?'SIDE B · '+BMODE[song.b.mode].tag:song.style,120,156,6,side==='B'?BMODE[song.b.mode].col:'#f4f1ff');
     txt(song.file?(song.err?'COULD NOT LOAD':song.buf?song.short:'LOADING...'):song.bpm+' BPM START',120,172,6,song.err?'#ff5a4e':'#3fe0d0');
     for(let i=0;i<5;i++){cx.fillStyle=i<diff(song)?song.c1:'#ffffff22';cx.fillRect(96+i*10,180,7,7)}
-    txt((menuMods().length?'BEST '+multStr(multOf(menuMods()))+' ':'BEST ')+hiOf(menuKey(song)),120,201,6,'#b9b0e6')}
+    txt(side==='B'&&!bOpen(song)?'LOCKED: A-RANK SIDE A':(menuMods().length?'BEST '+multStr(multOf(menuMods()))+' ':'BEST ')+hiOf(menuKey(song)),120,201,6,side==='B'&&!bOpen(song)?'#ffd23f':'#b9b0e6')}
     const ax=3*pulse;cx.fillStyle=song.c1;
     cx.beginPath();cx.moveTo(18-ax,156);cx.lineTo(10-ax,150);cx.lineTo(18-ax,144);cx.fill();
     cx.beginPath();cx.moveTo(222+ax,156);cx.lineTo(230+ax,150);cx.lineTo(222+ax,144);cx.fill();
     for(let i=0;i<SONGS.length;i++){cx.fillStyle=i===sel?song.c2:'#ffffff33';cx.fillRect(Math.round(120-SONGS.length*5+2.5+i*10),216,5,5)}
     ['bee','fly','boss'].forEach((k,i)=>{cx.drawImage(SP[k][fr],70+i*45,232);txt(PTS[k]+'',75+i*45,252,6,'#b9b0e6')});
     if(frac<.6)txt('PRESS FIRE',120,276,9,'#3fe0d0');
-    txt(playing?'< >  CHANGE TRACK':'< >  PREVIEW TRACKS',120,292,6,'#b9b0e6')}
+    txt((playing?'< > TRACK':'< > PREVIEW')+'   ^ v FLIP TO '+(side==='A'?'B':'A'),120,292,6,'#b9b0e6')}
   if(state==='title'&&titleFade){const u=(performance.now()-titleFade)/600;if(u>=1)titleFade=0;else{cx.globalAlpha=1-u;cx.fillStyle='#05031a';cx.fillRect(0,0,W,H);cx.globalAlpha=1}}
+  if(state==='play'&&runB){if(runB.mode==='cs'){cx.globalAlpha=.1+.05*pulse;cx.fillStyle='#7a3cff';cx.fillRect(0,0,W,H);cx.globalAlpha=1}
+    txt('B·'+BMODE[runB.mode].tag,234,27,5,BMODE[runB.mode].col,'right')}
   if(state==='play'&&fever){const h=(performance.now()/6)%360;cx.globalAlpha=.55+.3*pulse;cx.strokeStyle=`hsl(${h},100%,65%)`;cx.lineWidth=3;cx.strokeRect(1.5,1.5,W-3,H-3);cx.globalAlpha=1;txt('FEVER ×2',120,28,6,`hsl(${(h+120)%360},100%,70%)`)}
   if(state==='insert')drawInsert(fr);
   if(state==='chart')drawChartRec();
@@ -1040,7 +1091,7 @@ function pollPad(){const g=getPad();if(!g){padDir=0;return}
   padDir=state==='play'&&!paused?(dpad||stick):0;
   // menu navigation: d-pad presses or a fresh stick flick
   const flick=ax>.6?1:ax<-.6?-1:0;
-  if(state!=='play'||paused){if(down(PB.left))padNav(-1);if(down(PB.right))padNav(1);if(flick&&flick!==padStick)padNav(flick)}
+  if(state!=='play'||paused){if(down(PB.left))padNav(-1);if(down(PB.right))padNav(1);if(flick&&flick!==padStick)padNav(flick);if(!paused&&(down(PB.up)||down(PB.down)||down(PB.triangle)))flipSide()}
   padStick=flick;
   padHeld=b(PB.cross)||b(PB.square)||b(PB.r1)||b(PB.r2);
   if(down(PB.cross)||down(PB.square)||down(PB.r1)||down(PB.r2))fire();
@@ -1057,6 +1108,7 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==
   const menu=state==='title'||(state==='over'&&performance.now()-overAt>900);
   if(paused&&['arrowleft','arrowright','a','d'].includes(k)){e.preventDefault();if(!e.repeat)pauseSel^=1;return}
   if(k==='escape'){togglePause();return}
+  if(menu&&['arrowup','arrowdown','w','s','b'].includes(k)){e.preventDefault();if(!e.repeat)flipSide();return}
   if(k==='arrowleft'||k==='a'){e.preventDefault();if(menu){if(!e.repeat)pick(sel-1,true)}else held.l=1}
   else if(k==='arrowright'||k==='d'){e.preventDefault();if(menu){if(!e.repeat)pick(sel+1,true)}else held.r=1}
   else if(k===' '||k==='j'){e.preventDefault();keyHeld=true;if(!e.repeat)fire()}else if(k==='p')togglePause()});
@@ -1083,7 +1135,7 @@ cv.addEventListener('pointerdown',e=>{e.preventDefault();
 const off=document.getElementById('off'),offv=document.getElementById('offv');
 off.value=offset;offv.textContent=offset+' ms';
 off.addEventListener('input',()=>{offset=+off.value;offv.textContent=offset+' ms';st('sb_off',offset)});
-document.getElementById('tracks').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||state==='play')return;pick(sel+(+b.dataset.d),true)});
+document.getElementById('tracks').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||state==='play')return;if(b.dataset.flip){flipSide();return}pick(sel+(+b.dataset.d),true)});
 pick(sel,false);
 const cas=document.getElementById('cas');
 const setCas=v=>{cassette=v;st('sb_cass',v?'1':'0');cas.textContent='Track select: '+(v?'cassette':'classic');cas.setAttribute('aria-pressed',v)};
